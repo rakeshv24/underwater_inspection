@@ -1,5 +1,4 @@
 import numpy as np
-import pandas as pd
 import math
 
 def generateRandomCloud(x, y, z, radius, numPoints=100):
@@ -89,13 +88,4 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	points[:, 4] = yaw
 
 	return points
-
-def calcXCoordinate(radius, pitch, yaw):
-	return radius * math.cos(pitch) * math.sin(yaw)
-
-def calcYCoordinate(radius, pitch, yaw):
-	return radius * math.sin(pitch) * math.sin(yaw)
-
-def calcZCoordinate(radius, pitch, yaw):
-	return radius * math.cos(yaw)
 
