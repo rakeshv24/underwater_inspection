@@ -4,7 +4,7 @@ from mpl_toolkits.mplot3d import Axes3D
 import GenerateClouds
 
 # points = GenerateClouds.generateRandomCloud(50, 50, 50, 5, numPoints=10000)
-points = GenerateClouds.generateUniformCloud(50, 50, 50, 2, numPoints=1000)
+points = GenerateClouds.generateUniformCloud(50, 50, 50, 5, numPoints=1000)
 
 ## Matplotlib Sample Code using 2D arrays via meshgrid
 X = points[:, 0]

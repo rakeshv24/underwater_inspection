@@ -20,27 +20,31 @@ def getRotationMatrix(pitch, yaw):
 	# calculating partial rotation mat
 	return np.dot(yawMat, pitchMat)
 
-def sliceSphericalCap(points, pitch, yaw, capRadius):
+def sliceSphericalCap(points, x, y, z, sphereRadius, pitch, yaw, capRadius):
 	# function to get the points that make up a spherical cap
 	# inputs: 	full spherical cloud
+	#			x, y, z point that represents the origin
 	# 			pitch of the auv
 	#			yaw of the auv
 	#			cap radius
 	# outputs: 	subset of the points input that make up the cap
 
 	# calculating x, y, z point for current heading
-	# start at the origin
-	origin = np.array([2, 0, 0])
+	# start at the system origin along the x axis
+	origin = np.array([sphereRadius, 0, 0])
 	# getting rotation matrix
 	rotMat = getRotationMatrix(pitch, yaw)
 	# rotate origin to the current heading
-	translatedOrigin = rotMat.dot(origin.T).T
+	rotatedOrigin = rotMat.dot(origin.T).T
+
+	# translating the rotated origin to the sphere's frame
+	translatedOrigin = rotatedOrigin + [x, y, z]
 
 	# finding the points in the original cloud that make up the desired cap
 	# getting a subset of the x, y, z points from the point cloud
 	xyzPoints = points[:, :3]
 	# calculating the distance from the heading point (translatedOrigin) to each point on the sphere
-	dists = np.apply_along_axis(lambda x: np.linalg.norm(x - translatedOrigin), 1, xyzPoints)
+	dists = np.apply_along_axis(lambda lArg: np.linalg.norm(lArg - translatedOrigin), 1, xyzPoints)
 	# finding the indices where the distance is less than or equal to the cap radius
 	capPointIndxs = np.where(dists <= capRadius)
 
