@@ -37,6 +37,9 @@ def sliceSphericalCap(points, x, y, z, sphereRadius, pitch, yaw, capRadius):
 	# rotate origin to the current heading
 	rotatedOrigin = rotMat.dot(origin.T).T
 
+	# calculating approx for comparison radius
+	compDist = np.sqrt(capRadius**2 + (sphereRadius - np.sqrt(sphereRadius**2 - capRadius**2))**2)
+
 	# translating the rotated origin to the sphere's frame
 	translatedOrigin = rotatedOrigin + [x, y, z]
 
@@ -46,7 +49,7 @@ def sliceSphericalCap(points, x, y, z, sphereRadius, pitch, yaw, capRadius):
 	# calculating the distance from the heading point (translatedOrigin) to each point on the sphere
 	dists = np.apply_along_axis(lambda lArg: np.linalg.norm(lArg - translatedOrigin), 1, xyzPoints)
 	# finding the indices where the distance is less than or equal to the cap radius
-	capPointIndxs = np.where(dists <= capRadius)
+	capPointIndxs = np.where(dists <= compDist)
 
 	# returning the points where we are within the cone.
 	return points[capPointIndxs]

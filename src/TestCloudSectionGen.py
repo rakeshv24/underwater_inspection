@@ -7,7 +7,7 @@ import SliceCloud
 
 originX, originY, originZ = 50, 50, 50
 sphereRadius = 5
-points = GenerateClouds.generateUniformCloud(originX, originY, originZ, sphereRadius, numPoints=1000)
+points = GenerateClouds.generateUniformCloud(originX, originY, originZ, sphereRadius, numPoints=10000)
 
 pitch = math.pi/4
 yaw = math.pi/4
@@ -26,7 +26,7 @@ Z2 = sectionPoints[:, 2]
 
 fig = plt.figure()
 ax = Axes3D(fig)
-surf = ax.scatter3D(X, Y, Z)
+# surf = ax.scatter3D(X, Y, Z)
 surf2 = ax.scatter3D(X2, Y2, Z2)
 
 ax.set_xlabel('X axis')
