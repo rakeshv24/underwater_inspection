@@ -82,21 +82,16 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	# heading tangent to the sphere
 	# points[:, 3] = -np.arctan(yCoors, np.sqrt(xCoors**2 + zCoors**2))
 	# points[:, 4] = np.arctan(zCoors, xCoors) - math.pi/2
-	# maybe normal to the sphere???
-	V = np.array([xCoors, yCoors, zCoors]).T
-	normV = np.apply_along_axis(np.linalg.norm, 1, V)
 
-	VP = np.zeros(V.shape, dtype=float)
-	VP[:, :2] = V[:, :2]
-	normVP = np.apply_along_axis(np.linalg.norm, 1, VP)
+	originVecs = np.zeros((numPoints, 3), dtype=float)
+	radiusVecs = np.full((numPoints, 1), radius, dtype=float)
+	originVecs[:, 0] = radiusVecs
+	normOriginVecs = np.apply_along_axis(np.linalg.norm, 1, originVecs)
 
-	VPP = np.zeros(V.shape, dtype=float)
-	VPP[:, 1] = V[:, 1]
-	normVPP = np.apply_along_axis(np.linalg.norm, 1, VPP)
+	pointsVecs = np.array([xCoors, yCoors, zCoors]).T
+	normPointsVecs = np.apply_along_axis(np.linalg.norm, 1, pointsVecs)
 
-	# pitch and yaw
-	points[:, 3] = np.arccos(np.sum(VP * VPP, axis=1)/(normVP * normVPP))
-	points[:, 4] = np.arccos(np.sum(V * VP, axis=1)/(normV * normVP))
+	points[:, 4] = np.arccos(np.sum(originVecs * pointsVecs, axis=1)/(normOriginVecs * normPointsVecs))
 
 	return points
 
