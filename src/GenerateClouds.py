@@ -56,10 +56,10 @@ def calcUnitVector(vector):
 	return vector / np.linalg.norm(vector)
 
 def calcInnerAngle(vec1, vec2):
-	unitVec1 = calcUnitVector(vec1)
-	unitVec2 = calcUnitVector(vec2)
+	# unitVec1 = calcUnitVector(vec1)
+	# unitVec2 = calcUnitVector(vec2)
 
-	return np.arccos(np.clip(np.sum(unitVec1 * unitVec2, axis=1), -1.0, 1.0))
+	return np.arccos(np.sum(vec1 * vec2, axis=1) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
 
 def generateUniformCloud(x, y, z, radius, numPoints=100):
 	# function that generates uniform points around the sphere of input radius whose center is the input x,y,z coordinate
