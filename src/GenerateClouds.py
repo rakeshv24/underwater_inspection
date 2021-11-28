@@ -84,26 +84,19 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	# points[:, 4] = np.arctan(zCoors, xCoors) - math.pi/2
 	# maybe normal to the sphere???
 	V = np.array([xCoors, yCoors, zCoors])
-	normV = np.linalg.norm(V)
+	normV = np.apply_along_axis(np.linalg.norm, 1, V)
 
 	VP = np.full(V.shape, 0)
 	VP[:, :2] = V[:, :2]
-	normVP = np.linalg.norm(VP)
+	normVP = np.apply_along_axis(np.linalg.norm, 1, VP)
 
 	VPP = np.full(V.shape, 0)
 	VPP[:, 1] = V[:, 1]
-	normVPP = np.linalg.norm(VPP)
+	normVPP = np.apply_along_axis(np.linalg.norm, 1, VPP)
 
 	# pitch and yaw
-	points[:, 3] = np.arccos((VP * VPP)/(normVP * normVPP))
-
-	points[:, 4] = np.arccos((V * VP)/(normV * normVP))
-
-
-
-
-
-
+	points[:, 3] = np.arccos(np.sum(VP * VPP, axis=1)/(normVP * normVPP))
+	points[:, 4] = np.arccos(np.sum(V * VP, axis=1)/(normV * normVP))
 
 	return points
 
