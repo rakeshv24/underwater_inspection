@@ -52,6 +52,15 @@ def generateRandomCloud(x, y, z, radius, numPoints=100):
 
 	return points
 
+def calcUnitVector(vector):
+	return vector / np.linalg.norm(vector)
+
+def calcInnerAngle(vec1, vec2):
+	unitVec1 = calcUnitVector(vec1)
+	unitVec2 = calcUnitVector(vec2)
+
+	return np.arccos(np.clip(np.sum(unitVec1 * unitVec2, axis=1), -1.0, 1.0))
+
 def generateUniformCloud(x, y, z, radius, numPoints=100):
 	# function that generates uniform points around the sphere of input radius whose center is the input x,y,z coordinate
 	# by default, the number of points we generate is 100. all generated headings are orthogonal to the sphere
@@ -78,32 +87,21 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	points[:, 0] = xCoors + x
 	points[:, 1] = yCoors + y
 	points[:, 2] = zCoors + z
-	# pitch and yaw are unaffected by the origin offsets
-	# heading tangent to the sphere
-	# points[:, 3] = -np.arctan(yCoors, np.sqrt(xCoors**2 + zCoors**2))
-	# points[:, 4] = np.arctan(zCoors, xCoors) - math.pi/2
 
-	# originVecs = np.zeros((numPoints, 3), dtype=float)
-	# radiusVecs = np.full((numPoints, 1), radius, dtype=float).T
-	# originVecs[:, 0] = radiusVecs
-	# normOriginVecs = np.apply_along_axis(np.linalg.norm, 1, originVecs)
-	#
-	# pitchVecs = np.zeros((numPoints, 3), dtype=float)
-	# pitchVecs[:, 0] = xCoors
-	# pitchVecs[:, 2] = zCoors
-	# normPitchVecs = np.apply_along_axis(np.linalg.norm, 1, pitchVecs)
-	#
-	# yawVecs = np.zeros((numPoints, 3), dtype=float)
-	# yawVecs[:, 0] = xCoors
-	# yawVecs[:, 1] = yCoors
-	# normYawVecs = np.apply_along_axis(np.linalg.norm, 1, yawVecs)
+	# calculating the pitch and yaw values that yield normal headings
+	originVecs = np.zeros((numPoints, 3), dtype=float)
+	radiusVecs = np.full((numPoints, 1), radius, dtype=float).T
+	originVecs[:, 0] = radiusVecs
 
-	# pitch and yaw
-	# points[:, 3] = np.arccos(np.sum(originVecs * pitchVecs, axis=1) / (normOriginVecs * normPitchVecs))
-	# points[:, 4] = np.arccos(np.sum(originVecs * yawVecs, axis=1) / (normOriginVecs * normYawVecs))
+	pitchVecs = np.zeros((numPoints, 3), dtype=float)
+	pitchVecs[:, 0] = xCoors
+	pitchVecs[:, 2] = zCoors
 
-	points[:, 3] = np.arcsin(zCoors/radius)
-	points[:, 4] = np.arctan(yCoors/xCoors)
+	yawVecs = np.zeros((numPoints, 3), dtype=float)
+	yawVecs[:, 0] = xCoors
+	yawVecs[:, 1] = yCoors
+
+	points[:, 3] = calcInnerAngle(originVecs, pitchVecs)
+	points[:, 4] = calcInnerAngle(originVecs, yawVecs)
 
 	return points
-
