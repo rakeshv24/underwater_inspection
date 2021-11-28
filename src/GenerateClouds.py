@@ -88,10 +88,12 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	originVecs[:, 0] = radiusVecs
 	normOriginVecs = np.apply_along_axis(np.linalg.norm, 1, originVecs)
 
-	pointsVecs = np.array([xCoors, yCoors, zCoors]).T
-	normPointsVecs = np.apply_along_axis(np.linalg.norm, 1, pointsVecs)
+	yawVecs = np.zeros((numPoints, 3), dtype=float)
+	yawVecs[:, 0] = xCoors
+	yawVecs[:, 1] = yCoors
+	normYawVecs = np.apply_along_axis(np.linalg.norm, 1, yawVecs)
 
-	points[:, 4] = np.arccos(np.sum(originVecs * pointsVecs, axis=1)/(normOriginVecs * normPointsVecs))
+	points[:, 4] = np.arccos(np.sum(originVecs * yawVecs, axis=1)/(normOriginVecs * normYawVecs))
 
 	return points
 
