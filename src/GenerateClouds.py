@@ -52,14 +52,31 @@ def generateRandomCloud(x, y, z, radius, numPoints=100):
 
 	return points
 
-def calcUnitVector(vector):
-	return vector / np.linalg.norm(vector)
+def getRotationMatrix(pitch, yaw):
+	# function to calculate a partial rotation matrix using the pitch and the yaw
+	# inputs: 	pitch of the auv
+	#			yaw of the auv
+	# outputs: 	rotation matrix
 
-def calcInnerAngle(vec1, vec2):
-	# unitVec1 = calcUnitVector(vec1)
-	# unitVec2 = calcUnitVector(vec2)
+	# calculating yaw matrix
+	yawMat = np.array([[np.cos(yaw), -np.sin(yaw), 0],
+					   [np.sin(yaw), np.cos(yaw), 0],
+					   [0, 0, 1]])
 
-	return np.arccos(np.sum(vec1 * vec2, axis=1) / (np.linalg.norm(vec1) * np.linalg.norm(vec2)))
+
+	# calculating pitch matrix
+	pitchMat = np.array([[np.cos(pitch), 0, -np.sin(pitch)],
+						 [0, 1, 0],
+						 [np.sin(pitch), 0, np.cos(pitch)]])
+
+	# calculating partial rotation mat
+	return np.dot(yawMat, pitchMat)
+
+def calcHeading(sphereRadius, x, y, z):
+	pitch = np.arcsin(z / sphereRadius)
+	yaw = np.arctan(y / x)
+
+	return pitch, yaw
 
 def generateUniformCloud(x, y, z, radius, numPoints=100):
 	# function that generates uniform points around the sphere of input radius whose center is the input x,y,z coordinate
@@ -89,19 +106,34 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	points[:, 2] = zCoors + z
 
 	# calculating the pitch and yaw values that yield normal headings
-	originVecs = np.zeros((numPoints, 3), dtype=float)
-	radiusVecs = np.full((numPoints, 1), radius, dtype=float).T
-	originVecs[:, 0] = radiusVecs
+	# originVecs = np.zeros((numPoints, 3), dtype=float)
+	# radiusVecs = np.full((numPoints, 1), radius, dtype=float).T
+	# originVecs[:, 0] = radiusVecs
+	#
+	# pitchVecs = np.zeros((numPoints, 3), dtype=float)
+	# pitchVecs[:, 0] = xCoors
+	# pitchVecs[:, 2] = zCoors
+	#
+	# yawVecs = np.zeros((numPoints, 3), dtype=float)
+	# yawVecs[:, 0] = xCoors
+	# yawVecs[:, 1] = yCoors
+	#
+	# points[:, 3] = calcInnerAngle(originVecs, pitchVecs)
+	# points[:, 4] = calcInnerAngle(originVecs, yawVecs)
 
-	pitchVecs = np.zeros((numPoints, 3), dtype=float)
-	pitchVecs[:, 0] = xCoors
-	pitchVecs[:, 2] = zCoors
+	pitch, yaw = calcHeading(radius, xCoors, yCoors, zCoors)
 
-	yawVecs = np.zeros((numPoints, 3), dtype=float)
-	yawVecs[:, 0] = xCoors
-	yawVecs[:, 1] = yCoors
-
-	points[:, 3] = calcInnerAngle(originVecs, pitchVecs)
-	points[:, 4] = calcInnerAngle(originVecs, yawVecs)
+	points[:, 3] = pitch
+	points[:, 4] = yaw
 
 	return points
+
+def createTestPoint(sphereRadius, pitch, yaw):
+	# initial point
+	origin = np.array([sphereRadius, 0, 0])
+	# getting rotation matrix
+	rotMat = getRotationMatrix(pitch, yaw)
+	# rotate origin to the current heading
+	rotatedOrigin = rotMat.dot(origin.T).T
+
+	return rotatedOrigin
