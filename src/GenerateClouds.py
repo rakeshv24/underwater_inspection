@@ -30,10 +30,10 @@ def generateRandomCloud(x, y, z, radius, numPoints=100):
 	yCoors = radius * np.sin(randCoorPitchValues) * np.sin(randCoorYawValues)
 	zCoors = radius * np.cos(randCoorYawValues)
 
-	# loading new coordinates into the matrix
-	points[:, 0] = xCoors
-	points[:, 1] = yCoors
-	points[:, 2] = zCoors
+	# loading new coordinates into the matrix and adding the origin offsets
+	points[:, 0] = xCoors + x
+	points[:, 1] = yCoors + y
+	points[:, 2] = zCoors + z
 
 	# generating random heading angles
 	# generating random pitch values
@@ -73,19 +73,14 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	yCoors = radius * np.sin(coorPitch) * np.sin(coorYaw)
 	zCoors = radius * np.cos(coorYaw)
 
-	# loading new coordinates into the matrix
-	points[:, 0] = xCoors
-	points[:, 1] = yCoors
-	points[:, 2] = zCoors
-
-	# inserting heading angles
-	# calculating pitch and yaw values
-	pitch = np.arctan(zCoors/xCoors)
-	yaw = np.arctan(yCoors/xCoors)
-
 	# loading calculated values into matrix
-	points[:, 3] = pitch
-	points[:, 4] = yaw
+	# loading the x, y, z points with the origin offsets
+	points[:, 0] = xCoors + x
+	points[:, 1] = yCoors + y
+	points[:, 2] = zCoors + z
+	# pitch and yaw are unaffected by the origin offsets
+	points[:, 3] = -np.arctan(yCoors, np.sqrt(xCoors**2 + zCoors**2))
+	points[:, 4] = np.arctan(zCoors, xCoors) - math.pi/2
 
 	return points
 
