@@ -73,10 +73,6 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 	yCoors = radius * np.sin(coorPitch) * np.sin(coorYaw)
 	zCoors = radius * np.cos(coorYaw)
 
-	# calculating pitch and yaw values
-	pitch = np.arctan(zCoors/xCoors)
-	yaw = np.arctan(yCoors/xCoors)
-
 	# loading calculated values into matrix
 	# loading the x, y, z points with the origin offsets
 	points[:, 0] = xCoors + x
