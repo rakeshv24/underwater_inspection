@@ -31,12 +31,10 @@ class ViewpointGenerator:
                          euler_angles[2]
                          ]
         
-        # viewpoints = GenerateClouds.generateUniformCloud(0, 0, 0, 5, numPoints=1000)
-        viewpoints = GenerateClouds.generateRandomCloud(0, 0, 0, 5, numPoints=1000)
-        sectionPoints = SliceCloud.sliceSphericalCap(viewpoints, 5, euler_angles[1], euler_angles[2], 3)
+        viewpoints = GenerateClouds.generateUniformCloud(self.rob_pose[0], self.rob_pose[1], self.rob_pose[2], 5, numPoints=1000)
+        # viewpoints = GenerateClouds.generateRandomCloud(self.rob_pose[0], self.rob_pose[1], self.rob_pose[2], 5, numPoints=1000)
+        sectionPoints = SliceCloud.sliceSphericalCap(viewpoints, self.rob_pose[0], self.rob_pose[1], self.rob_pose[2], 5, euler_angles[1], euler_angles[2], 3)
         
-        viewpoints[:, 0:3] += self.rob_pose[0:3]
-        sectionPoints[:, 0:3] += self.rob_pose[0:3]
 
         self.marker_idx = 0
         self.debug_markers = MarkerArray()
