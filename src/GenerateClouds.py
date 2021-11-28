@@ -74,7 +74,7 @@ def getRotationMatrix(pitch, yaw):
 
 def calcHeading(sphereRadius, x, y, z):
 	pitch = np.arcsin(z / sphereRadius)
-	yaw = np.arctan(y / x)
+	yaw = np.arctan2(y, x)
 
 	return pitch, yaw
 
