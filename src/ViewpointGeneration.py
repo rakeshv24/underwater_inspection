@@ -39,36 +39,18 @@ class ViewpointGenerator:
         self.marker_idx = 0
         self.debug_markers = MarkerArray()
         self.vps = PoseArray()
-        self.vps1 = PoseArray()
+        self.selected_vps = PoseArray()
         self.vps.header.frame_id = 'world'    
-        self.vps1.header.frame_id = 'world'    
+        self.selected_vps.header.frame_id = 'world'
+        
         for v in viewpoints:
             vx = v[0]
             vy = v[1]
             vz = v[2]
-            viewpoint_orientation = tf.transformations.quaternion_from_euler(0, v[3], v[4])
-            
-            # marker = Marker()
-            # marker.header.frame_id = 'world'
-            # marker.header.stamp = rospy.Time.now()
-            # marker.id = self.marker_idx
-            # marker.type = Marker.ARROW
-            # marker.action = Marker.ADD
-            # marker.pose.orientation.x = viewpoint_orientation[0]
-            # marker.pose.orientation.y = viewpoint_orientation[1]
-            # marker.pose.orientation.z = viewpoint_orientation[2]
-            # marker.pose.orientation.w = viewpoint_orientation[3]
-            # marker.color.r = 0.0
-            # marker.color.g = 1.0
-            # marker.color.b = 1.0
-            # marker.color.a = 1.0
-            # marker.scale.x = 0.1
-            # marker.scale.y = 0.1
-            # marker.scale.z = 0.1
-            # marker.points = [Point(vx, vy, vz), Point(vx + 0.5, vy, vz)]
-            # self.debug_markers.markers.append(marker)
-            # self.marker_idx += 1 
-            # self.debug_markers.points.append(v)
+            roll = 0.0
+            pitch = -v[3]
+            yaw = v[4]
+            viewpoint_orientation = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
             
             p = Pose()
             p.position.x = vx
@@ -78,13 +60,30 @@ class ViewpointGenerator:
             p.orientation.y = viewpoint_orientation[1]
             p.orientation.z = viewpoint_orientation[2]
             p.orientation.w = viewpoint_orientation[3]
+            
+            # Conversion from euler angles to quaternions
+            
+            # cy = math.cos(yaw * 0.5)
+            # sy = math.sin(yaw * 0.5)
+            # cp = math.cos(pitch * 0.5)
+            # sp = math.sin(pitch * 0.5)
+            # cr = math.cos(roll * 0.5)
+            # sr = math.sin(roll * 0.5)
+            # p.orientation.x = sr * cp * cy - cr * sp * sy
+            # p.orientation.y = cr * sp * cy + sr * cp * sy
+            # p.orientation.z = cr * cp * sy - sr * sp * cy
+            # p.orientation.w = cr * cp * cy + sr * sp * sy
+            
             self.vps.poses.append(p)
         
         for s in sectionPoints:
             sx = s[0]
             sy = s[1]
             sz = s[2]
-            viewpoint_orientation = tf.transformations.quaternion_from_euler(0, s[3], s[4])
+            roll = 0.0
+            pitch = -s[3]
+            yaw = s[4]
+            viewpoint_orientation = tf.transformations.quaternion_from_euler(roll, pitch, yaw)
             
             p = Pose()
             p.position.x = sx
@@ -94,15 +93,10 @@ class ViewpointGenerator:
             p.orientation.y = viewpoint_orientation[1]
             p.orientation.z = viewpoint_orientation[2]
             p.orientation.w = viewpoint_orientation[3]
-            self.vps1.poses.append(p)
+            self.selected_vps.poses.append(p)
             
-        # print(viewpoints)
-        # print(self.rob_pose)
-        # print(sectionPoints.shape)
-        # print(self.debug_markers)
-        # print("")
         self.viewpoint_pub.publish(self.vps)
-        self.viewpoint_sel_pub.publish(self.vps1)
+        self.viewpoint_sel_pub.publish(self.selected_vps)
         self.marker_publisher(self.debug_markers)
     
     def marker_publisher(self, viewpoint_markers):
