@@ -6,7 +6,7 @@ import ParetoFronts
 # x -> battery
 # y -> path length
 # z -> map coverage
-poi = [100, 2, 2]
+poi = [1, 2, 2]
 other1 = [1, 2, 3]
 other2 = [4, 5, 6]
 other3 = [7, 8, 9]

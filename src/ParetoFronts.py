@@ -56,7 +56,7 @@ def calcSPFitnessValues(objectiveValues):
 	rawFitnessValues = np.apply_along_axis(lambda i: calcSPRawFitness(objectiveValues, strengths, i), 1, indxRange)
 
 	# calculating density
-	k = round(np.sqrt(len(objectiveValues)))
+	k = int(round(np.sqrt(len(objectiveValues))))
 	densityValues = calcSPDensityValues(objectiveValues, k)
 
 	return rawFitnessValues + densityValues
