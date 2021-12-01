@@ -91,13 +91,14 @@ void MapCarving::viewpointCallback(const inspection_planner_msgs::ViewpointList:
   // std::cout << "[map_carving][viewpointCallback] viewpoint received" << std::endl;
   inspection_planner_msgs::ViewpointList viewpoints_map;
   for (auto& viewpoint : viewpointlist_msg->viewpoints){
-    int occ_cells = obtainViewpointInfo(viewpoint.x, viewpoint.y, viewpoint.z, viewpoint.yaw);
+    int unexplored_cells = obtainViewpointInfo(viewpoint.x, viewpoint.y, viewpoint.z, viewpoint.yaw);
     inspection_planner_msgs::Viewpoint viewpoint_modified;
     viewpoint_modified.x = viewpoint.x;
     viewpoint_modified.y = viewpoint.y;
     viewpoint_modified.z = viewpoint.z;
     viewpoint_modified.yaw = viewpoint.yaw;
-    viewpoint_modified.reward = occ_cells;
+    viewpoint_modified.cost = viewpoint.cost;
+    viewpoint_modified.reward = unexplored_cells;
     viewpoints_map.viewpoints.push_back(viewpoint_modified);
   }
   publishViewpointInfo(viewpoints_map);
@@ -113,7 +114,7 @@ void MapCarving::collisonMapCallback(const octomap_msgs::Octomap::ConstPtr &map_
     // octree = dynamic_cast<octomap::OcTree*>(abstract_tree_);
     tree_initialized_ = true;
     collision_tree_ = dynamic_cast<octomap::OcTree*>(abstract_tree_);
-    std::size_t node_count_ = collision_tree_->calcNumNodes();
+    node_count_ = collision_tree_->calcNumNodes();
     // std::cout << "[map_carving][collisonMapCallback] Tree node count: " << node_count_ << std::endl;
   }
 
@@ -249,7 +250,8 @@ int MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, doubl
   else{
     std::cout<<"[MapCarving][obtainViewpointInfo] Tree not initialized"<<std::endl;
   }
-  return occ_cells;
+  int unexplored_area = -(node_count_ - (occ_cells + free_cells));
+  return unexplored_area;
 }
 
 //////////////////////////////////

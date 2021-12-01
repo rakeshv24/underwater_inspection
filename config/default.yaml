@@ -2,7 +2,7 @@
 map_topic_          : /sonar_occupancy_map
 odometry_topic_     : /raven/odom
 viewpoint_topic_    : /rob537/viewpoints_spherical_cap
-viewpoint_map_topic_: /viewpoint_map_info
+viewpoint_map_topic_: /rob537/viewpoints_map_info
 
 # Constants
 ravenLength               : 1.0 #m

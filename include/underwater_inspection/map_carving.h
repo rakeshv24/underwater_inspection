@@ -52,6 +52,7 @@ class map_carving_ns::MapCarving {
   double unknownThresh;
   double freeThresh;
   double occThresh;
+  std::size_t node_count_;
 
   // Other variables
   geometry_msgs::Pose odom_;

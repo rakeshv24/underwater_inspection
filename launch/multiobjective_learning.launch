@@ -1,8 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
-  
-  <node name="underwater_inspection" pkg="underwater_inspection" type="underwater_inspection_node" output="screen">
+  <node name="ViewpointGeneration.py" pkg="underwater_inspection" type="ViewpointGeneration.py" output="screen"/>
+  <node name="BatteryMetric.py" pkg="underwater_inspection" type="BatteryMetric.py" output="screen"/>
+  <node name="ViewpointSelection.py" pkg="underwater_inspection" type="ViewpointSelection.py" output="screen"/>
+  <node name="underwater_inspection_node" pkg="underwater_inspection" type="underwater_inspection_node" output="screen">
     <!-- launch-prefix="xterm -e gdb -args" -->
 
     <!-- load the base config file with all the params -->
