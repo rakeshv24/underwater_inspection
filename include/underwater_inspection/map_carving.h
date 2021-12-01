@@ -71,7 +71,7 @@ class map_carving_ns::MapCarving {
   void collisonMapCallback(const octomap_msgs::Octomap::ConstPtr &map_msg);
   void odometryCallback(const nav_msgs::Odometry &odom_msg);
   void publishViewpointInfo(inspection_planner_msgs::ViewpointList viewpointlist);
-  int obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw);
+  double obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw);
   double wrapAngle(double angle);
   
  public:

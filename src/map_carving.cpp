@@ -91,15 +91,20 @@ void MapCarving::viewpointCallback(const inspection_planner_msgs::ViewpointList:
   // std::cout << "[map_carving][viewpointCallback] viewpoint received" << std::endl;
   inspection_planner_msgs::ViewpointList viewpoints_map;
   for (auto& viewpoint : viewpointlist_msg->viewpoints){
-    int unexplored_cells = obtainViewpointInfo(viewpoint.x, viewpoint.y, viewpoint.z, viewpoint.yaw);
-    inspection_planner_msgs::Viewpoint viewpoint_modified;
-    viewpoint_modified.x = viewpoint.x;
-    viewpoint_modified.y = viewpoint.y;
-    viewpoint_modified.z = viewpoint.z;
-    viewpoint_modified.yaw = viewpoint.yaw;
-    viewpoint_modified.cost = viewpoint.cost;
-    viewpoint_modified.reward = unexplored_cells;
-    viewpoints_map.viewpoints.push_back(viewpoint_modified);
+    double unexplored_area = obtainViewpointInfo(viewpoint.x, viewpoint.y, viewpoint.z, viewpoint.yaw);
+    if(unexplored_area<-0.99 || unexplored_area>-0.2){
+      continue;
+    }
+    else{
+      inspection_planner_msgs::Viewpoint viewpoint_modified;
+      viewpoint_modified.x = viewpoint.x;
+      viewpoint_modified.y = viewpoint.y;
+      viewpoint_modified.z = viewpoint.z;
+      viewpoint_modified.yaw = viewpoint.yaw;
+      viewpoint_modified.cost = viewpoint.cost;
+      viewpoint_modified.reward = unexplored_area;
+      viewpoints_map.viewpoints.push_back(viewpoint_modified);
+    }
   }
   publishViewpointInfo(viewpoints_map);
 }
@@ -143,7 +148,7 @@ void MapCarving::publishViewpointInfo(inspection_planner_msgs::ViewpointList vie
 //////////////////////////////////
 // Main functions
 
-int MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw){
+double MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw){
   // ROS_INFO("[map_carving][obtainViewpointInfo] Map carving started.....");
   // std::cout << "[map_carving][obtainViewpointInfo] Map carving started....." << std::endl;
   int unknown_cells = 0;
@@ -250,7 +255,7 @@ int MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, doubl
   else{
     std::cout<<"[MapCarving][obtainViewpointInfo] Tree not initialized"<<std::endl;
   }
-  int unexplored_area = -(node_count_ - (occ_cells + free_cells));
+  double unexplored_area= -(double)(node_count_ - (occ_cells + free_cells))/(double)node_count_;
   return unexplored_area;
 }
 

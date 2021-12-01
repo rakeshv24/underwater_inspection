@@ -17,7 +17,8 @@ class Battery():
 		# to simulate noise, we use a scipy random distribution specified on contruction
 		self._distribution = distribution
 
-		self.viewpoint_sel_sub = rospy.Subscriber("/rob537/viewpoints_map_info", ViewpointList, self.viewpoint_callback, queue_size=1)
+		self.viewpoint_sel_sub = rospy.Subscriber("/rob537/viewpoints_map_info", ViewpointList, self.viewpoint_callback,
+                                                  queue_size=1)
 		self.viewpoint_info_pub = rospy.Publisher("/rob537/viewpoints_info", MultiViewpointInfo, queue_size=10)
 
 	def viewpoint_callback(self, msg):
