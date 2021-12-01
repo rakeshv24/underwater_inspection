@@ -11,16 +11,16 @@ set(CMAKE_BUILD_TYPE "Debug")
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   # greensea_msgs
+  inspection_planner_msgs
   roscpp
   rospy
   std_msgs
   sensor_msgs
+  message_generation
   tf
 )
 
-# find_package(octomap REQUIRED)
-# find_package(ompl REQUIRED)
-# find_package(fcl REQUIRED)
+find_package(octomap REQUIRED)
 # find_package(Eigen3 REQUIRED)
 
 
@@ -58,18 +58,17 @@ find_package(catkin REQUIRED COMPONENTS
 ##   * add every package in MSG_DEP_SET to generate_messages(DEPENDENCIES ...)
 
 ## Generate messages in the 'msg' folder
-# add_message_files(
-#   FILES
-#   Message1.msg
-#   Message2.msg
-# )
+add_message_files(
+   FILES
+   ViewpointInfo.msg
+   MultiViewpointInfo.msg
+)
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+   FILES
+   DepleteBattery.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -79,10 +78,12 @@ find_package(catkin REQUIRED COMPONENTS
 # )
 
 ## Generate added messages and services with any dependencies listed here
-# generate_messages(
-#   DEPENDENCIES
-#   acoustic_msgs#   std_msgs
-# )
+generate_messages(
+  DEPENDENCIES
+  std_msgs
+  sensor_msgs
+  geometry_msgs
+)
 
 ################################################
 ## Declare ROS dynamic reconfigure parameters ##
@@ -116,7 +117,7 @@ find_package(catkin REQUIRED COMPONENTS
 catkin_package(
 #  INCLUDE_DIRS include
 #  LIBRARIES underwater_inspection
-#  CATKIN_DEPENDS acoustic_msgs roscpp rospy std_msgs
+  CATKIN_DEPENDS roscpp rospy std_msgs message_runtime
 #  DEPENDS system_lib
 )
 
@@ -128,15 +129,14 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# include/underwater_inspection
+  include/underwater_inspection
   ${catkin_INCLUDE_DIRS}
-  # ${OCTOMAP_INCLUDE_DIRS}
-  # ${OMPL_INCLUDE_DIRS}
-  # ${fcl_INCLUDE_DIRS}
+  ${OCTOMAP_INCLUDE_DIRS}
   # ${EIGEN3_INCLUDE_DIRS}
 )
 
-# link_libraries(${OCTOMAP_LIBRARIES} ${fcl_LIBRARY_DIRS} ${OMPL_LIBRARY_DIRS} ${EIGEN3_LIBRARY_DIRS})
+link_libraries(${OCTOMAP_LIBRARIES})
+# ${EIGEN3_LIBRARY_DIRS}
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -151,7 +151,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/***.cpp)
+add_executable(${PROJECT_NAME}_node src/map_carving.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -164,14 +164,12 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-  # ${catkin_LIBRARIES}
-  # ${OCTOMAP_LIBRARIES}
-  # ${OMPL_LIBRARIES}
+target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
+  ${OCTOMAP_LIBRARIES}
   # ${EIGEN3_LIBRARIES}
-  # ${fcl_LIBRARIES}
-  # fcl
-# )
+
+)
 
 #############
 ## Install ##

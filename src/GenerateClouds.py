@@ -123,7 +123,7 @@ def generateUniformCloud(x, y, z, radius, numPoints=100):
 
 	pitch, yaw = calcHeading(radius, xCoors, yCoors, zCoors)
 
-	points[:, 3] = pitch
+	points[:, 3] = 0.0
 	points[:, 4] = yaw
 
 	return points
