@@ -11,6 +11,7 @@ set(CMAKE_BUILD_TYPE "Debug")
 ## is used, also find other catkin packages
 find_package(catkin REQUIRED COMPONENTS
   # greensea_msgs
+  inspection_planner_msgs
   roscpp
   rospy
   std_msgs
@@ -18,9 +19,7 @@ find_package(catkin REQUIRED COMPONENTS
   tf
 )
 
-# find_package(octomap REQUIRED)
-# find_package(ompl REQUIRED)
-# find_package(fcl REQUIRED)
+find_package(octomap REQUIRED)
 # find_package(Eigen3 REQUIRED)
 
 
@@ -128,15 +127,14 @@ catkin_package(
 ## Your package locations should be listed before other locations
 include_directories(
 # include
-# include/underwater_inspection
+  include/underwater_inspection
   ${catkin_INCLUDE_DIRS}
-  # ${OCTOMAP_INCLUDE_DIRS}
-  # ${OMPL_INCLUDE_DIRS}
-  # ${fcl_INCLUDE_DIRS}
+  ${OCTOMAP_INCLUDE_DIRS}
   # ${EIGEN3_INCLUDE_DIRS}
 )
 
-# link_libraries(${OCTOMAP_LIBRARIES} ${fcl_LIBRARY_DIRS} ${OMPL_LIBRARY_DIRS} ${EIGEN3_LIBRARY_DIRS})
+link_libraries(${OCTOMAP_LIBRARIES})
+# ${EIGEN3_LIBRARY_DIRS}
 
 ## Declare a C++ library
 # add_library(${PROJECT_NAME}
@@ -151,7 +149,7 @@ include_directories(
 ## Declare a C++ executable
 ## With catkin_make all packages are built within a single CMake context
 ## The recommended prefix ensures that target names across packages don't collide
-# add_executable(${PROJECT_NAME}_node src/***.cpp)
+add_executable(${PROJECT_NAME}_node src/map_carving.cpp)
 
 ## Rename C++ executable without prefix
 ## The above recommended prefix causes long target names, the following renames the
@@ -164,14 +162,12 @@ include_directories(
 # add_dependencies(${PROJECT_NAME}_node ${${PROJECT_NAME}_EXPORTED_TARGETS} ${catkin_EXPORTED_TARGETS})
 
 ## Specify libraries to link a library or executable target against
-# target_link_libraries(${PROJECT_NAME}_node
-  # ${catkin_LIBRARIES}
-  # ${OCTOMAP_LIBRARIES}
-  # ${OMPL_LIBRARIES}
+target_link_libraries(${PROJECT_NAME}_node
+  ${catkin_LIBRARIES}
+  ${OCTOMAP_LIBRARIES}
   # ${EIGEN3_LIBRARIES}
-  # ${fcl_LIBRARIES}
-  # fcl
-# )
+
+)
 
 #############
 ## Install ##

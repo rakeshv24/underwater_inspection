@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+
+<launch>
+  
+  <node name="underwater_inspection" pkg="underwater_inspection" type="underwater_inspection_node" output="screen">
+    <!-- launch-prefix="xterm -e gdb -args" -->
+
+    <!-- load the base config file with all the params -->
+    <rosparam command="load" file="$(find underwater_inspection)/config/default.yaml" />
+
+  </node>
+
+</launch>
