@@ -1,7 +1,7 @@
 # Topics
 map_topic_          : /sonar_occupancy_map
 odometry_topic_     : /raven/odom
-viewpoint_topic_    : /viewpoint_selected
+viewpoint_topic_    : /rob537/viewpoints_spherical_cap
 viewpoint_map_topic_: /viewpoint_map_info
 
 # Constants

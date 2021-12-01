@@ -6,6 +6,7 @@
 #include <ros/ros.h>
 #include <nav_msgs/Odometry.h>
 #include <inspection_planner_msgs/Viewpoint.h>
+#include <inspection_planner_msgs/ViewpointList.h>
 #include <octomap_msgs/Octomap.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseArray.h>
@@ -65,11 +66,11 @@ class map_carving_ns::MapCarving {
 
   // Functions
   bool readParameters();
-  void viewpointCallback(const inspection_planner_msgs::Viewpoint::ConstPtr &viewpoint_msg);
+  void viewpointCallback(const inspection_planner_msgs::ViewpointList::ConstPtr &viewpointlist_msg);
   void collisonMapCallback(const octomap_msgs::Octomap::ConstPtr &map_msg);
   void odometryCallback(const nav_msgs::Odometry &odom_msg);
-  void publishViewpointInfo();
-  void obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw);
+  void publishViewpointInfo(inspection_planner_msgs::ViewpointList viewpointlist);
+  int obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw);
   double wrapAngle(double angle);
   
  public:
