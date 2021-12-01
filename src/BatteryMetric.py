@@ -4,6 +4,7 @@
 import rospy
 from inspection_planner_msgs.msg import Viewpoint, ViewpointList
 from underwater_inspection.msg import ViewpointInfo, MultiViewpointInfo
+from underwater_inspection.srv import DepleteBattery
 
 
 class Battery():
@@ -41,18 +42,20 @@ class Battery():
 		return self._battery
 
 	# member methods
-	def depleteBattery(self, dist):
+	def depleteBattery(self, req):
 		# depletes the battery by the distance
 		# checking if we have a random distribution
 		if self._distribution is None:
-			self._battery -= dist
+			self._battery -= req.distance
 		else:
-			self._battery -= dist * self._distribution.rvs()
+			self._battery -= req.distance * self._distribution.rvs()
+		return True, "Battery depleted!"
 
 
 if __name__ == '__main__':
     rospy.init_node('battery_node', anonymous=True)
     b = Battery(100.0, None)
+    db = rospy.Service('underwater_inspection/deplete_battery', DepleteBattery, b.depleteBattery)
     
     try:
         rospy.spin()

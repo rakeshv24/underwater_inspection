@@ -244,7 +244,7 @@ int MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, doubl
     // double occ_dist_ = (double)occ_cells_ / (double)total_points;
     // std::cout<<"[MapCarving][obtainViewpointInfo] Total Points: "<<total_points<<std::endl;
     // std::cout<<"[MapCarving][obtainViewpointInfo] Unknown space: "<<unknown_dist_<<"; Number: "<<unknown_cells_<<std::endl;
-    std::cout<<"[MapCarving][obtainViewpointInfo] Occupied cells: "<<occ_cells<<std::endl;
+    // std::cout<<"[MapCarving][obtainViewpointInfo] Occupied cells: "<<occ_cells<<std::endl;
     // std::cout<<"[MapCarving][obtainViewpointInfo] Free space: "<<free_dist_<<"; Number: "<<free_cells_<<std::endl;
   }
   else{

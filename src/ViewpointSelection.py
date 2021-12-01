@@ -6,13 +6,24 @@ import ParetoFronts
 import tf
 from geometry_msgs.msg import PoseArray, Pose
 from underwater_inspection.msg import ViewpointInfo, MultiViewpointInfo
+from underwater_inspection.srv import DepleteBattery
 
+
+def deplete_battery_service(distance):
+    rospy.wait_for_service('underwater_inspection/deplete_battery')
+    try:
+        handle = rospy.ServiceProxy('underwater_inspection/deplete_battery', DepleteBattery)
+        resp = handle(distance)
+        return resp
+    except rospy.ServiceException as e:
+        rospy.logerr("Deplete battery service call failed %s", e)
+        
 
 class ViewpointSelector:
     def __init__(self):
         self.viewpoint_info_sub = rospy.Subscriber("/rob537/viewpoints_info", MultiViewpointInfo, self.viewpoint_callback, queue_size=1)
         # self.selected_viewpoint_pub = rospy.Publisher("/rob537/viewpoint_selected", ViewpointInfo, queue_size=10)
-        self.selected_viewpoint_pub = rospy.Publisher("/waypoints", PoseArray, queue_size=10)
+        self.selected_viewpoint_pub = rospy.Publisher("/waypoints", PoseArray, queue_size=1)
         
     def viewpoint_callback(self, msg):
         points = []
@@ -43,6 +54,7 @@ class ViewpointSelector:
         waypoint.poses.append(selected_point)
 
         self.selected_viewpoint_pub.publish(waypoint)
+        deplete_battery_service(vp_selected.cost)
         # self.selected_viewpoint_pub.publish(vp_selected)
 
 
