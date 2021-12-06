@@ -1,5 +1,4 @@
 #!/usr/bin/env python3
-
 import rospy
 import GenerateClouds
 import SliceCloud
@@ -8,6 +7,8 @@ from visualization_msgs.msg import Marker, MarkerArray
 import tf
 from geometry_msgs.msg import Pose, Point, PoseArray
 from inspection_planner_msgs.msg import Viewpoint, ViewpointList
+import numpy as np
+
 
 class ViewpointGenerator:
     def __init__(self):
@@ -16,7 +17,10 @@ class ViewpointGenerator:
         self.marker_pub = rospy.Publisher("/rob537/viewpoints_generated_debug_markers", MarkerArray, queue_size=10)
         self.viewpoint_pub = rospy.Publisher("/rob537/viewpoints_generated", PoseArray, queue_size=10)
         self.viewpoint_sel_pub = rospy.Publisher("/rob537/viewpoints_spherical_cap", ViewpointList, queue_size=10)
-        self.image_sub = rospy.Subscriber("/raven/odom", Odometry, self.odom_callback, queue_size=1)
+        self.odom_sub = rospy.Subscriber("/raven/odom", Odometry, self.odom_callback, queue_size=1)
+        
+    def wrap_angle(self, angle):
+        return ((angle + np.pi) % (2 * np.pi)) - np.pi
     
     def odom_callback(self, odom):
         euler_angles = tf.transformations.euler_from_quaternion((odom.pose.pose.orientation.x, 
@@ -41,9 +45,47 @@ class ViewpointGenerator:
         
         for i in [1, 2, 3]:
         
-            viewpoints = GenerateClouds.generateUniformCloud(self.rob_pose[0], self.rob_pose[1], self.rob_pose[2], i, numPoints=100)
-            # viewpoints = GenerateClouds.generateRandomCloud(self.rob_pose[0], self.rob_pose[1], self.rob_pose[2], 5, numPoints=1000)
-            sectionPoints = SliceCloud.sliceSphericalCap(viewpoints, self.rob_pose[0], self.rob_pose[1], self.rob_pose[2], 2, euler_angles[1], euler_angles[2], 0.5*i)
+            viewpoints = GenerateClouds.generateUniformCloud(self.rob_pose[0],
+                                                             self.rob_pose[1],
+                                                             self.rob_pose[2],
+                                                             i,
+                                                             numPoints=i*50)
+            
+            # viewpoints = GenerateClouds.generateRandomCloud(self.rob_pose[0],
+            #                                                 self.rob_pose[1],
+            #                                                 self.rob_pose[2],
+            #                                                 i,
+            #                                                 numPoints=i*50)
+            
+            sectionPoints1 = SliceCloud.sliceSphericalCap(viewpoints,
+                                                          self.rob_pose[0],
+                                                          self.rob_pose[1],
+                                                          self.rob_pose[2],
+                                                          i,
+                                                          euler_angles[1],
+                                                          euler_angles[2],
+                                                          0.5*i)
+            
+            sectionPoints2 = SliceCloud.sliceSphericalCap(viewpoints,
+                                                          self.rob_pose[0],
+                                                          self.rob_pose[1],
+                                                          self.rob_pose[2],
+                                                          i,
+                                                          euler_angles[1],
+                                                          self.wrap_angle(euler_angles[2] - np.radians(90)),
+                                                          0.5*i)
+            
+            sectionPoints3 = SliceCloud.sliceSphericalCap(viewpoints,
+                                                          self.rob_pose[0],
+                                                          self.rob_pose[1],
+                                                          self.rob_pose[2],
+                                                          i,
+                                                          euler_angles[1],
+                                                          self.wrap_angle(euler_angles[2] + np.radians(90)),
+                                                          0.5*i)
+            
+            sectionPoints = np.vstack((sectionPoints1, sectionPoints2, sectionPoints3))
+            sectionPoints = np.unique(sectionPoints, axis=0)
             
             for v in viewpoints:
                 vx = v[0]

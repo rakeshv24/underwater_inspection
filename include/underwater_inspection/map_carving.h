@@ -7,6 +7,8 @@
 #include <nav_msgs/Odometry.h>
 #include <inspection_planner_msgs/Viewpoint.h>
 #include <inspection_planner_msgs/ViewpointList.h>
+#include <underwater_inspection/MultiViewpointInfo.h>
+#include <underwater_inspection/CarveMap.h>
 #include <octomap_msgs/Octomap.h>
 #include <geometry_msgs/PointStamped.h>
 #include <geometry_msgs/PoseArray.h>
@@ -38,11 +40,15 @@ class map_carving_ns::MapCarving {
   // ROS publishers
   ros::Publisher viewpoint_map_pub_;
   
+  // ROS services
+  ros::ServiceServer carve_map_service_;
+
   // String constants
   std::string map_topic_;
   std::string viewpoint_topic_;
   std::string viewpoint_map_topic_;
   std::string odometry_topic_;
+  std::string carving_topic_;
   
   // Environment constants
   double ravenLength;
@@ -71,7 +77,8 @@ class map_carving_ns::MapCarving {
   void collisonMapCallback(const octomap_msgs::Octomap::ConstPtr &map_msg);
   void odometryCallback(const nav_msgs::Odometry &odom_msg);
   void publishViewpointInfo(inspection_planner_msgs::ViewpointList viewpointlist);
-  int obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw);
+  bool carveMapService(underwater_inspection::CarveMap::Request &req, underwater_inspection::CarveMap::Response &res);
+  double obtainViewpointInfo(double vp_x, double vp_y, double vp_z, double vp_yaw);
   double wrapAngle(double angle);
   
  public:

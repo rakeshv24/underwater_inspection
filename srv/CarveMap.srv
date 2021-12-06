@@ -1,0 +1,6 @@
+bool flag
+inspection_planner_msgs/ViewpointList vps
+---
+inspection_planner_msgs/ViewpointList vps_map 
+bool success
+string message
