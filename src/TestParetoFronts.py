@@ -11,7 +11,9 @@ other1 = [1, 2, 3]
 other2 = [4, 5, 6]
 other3 = [7, 8, 9]
 
-objectiveValues = np.array([poi, other1, other2, other3])
+test = [[98.0, -2.0, 0.8338907361030579], [98.0, -2.0, 0.9951386451721191], [98.0, -2.0, 0.8144116997718811], [98.0, -2.0, 0.8975814580917358], [98.0, -2.0, 0.9984893202781677], [98.0, -2.0, 0.8913610577583313]]
+
+objectiveValues = np.array(test)
 
 fitnessValues = ParetoFronts.calcSPFitnessValues(objectiveValues)
 

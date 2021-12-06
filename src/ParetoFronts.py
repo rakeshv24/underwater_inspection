@@ -2,20 +2,38 @@ import numpy as np
 from scipy.spatial import distance_matrix
 
 def normalize(mat, axis=0):
-	return (mat - np.min(mat, axis=axis)) / np.ptp(mat, axis=axis)
+	
+	denom = np.ptp(mat, axis=axis)
+	denom[np.isclose(denom, 0)] = 1
+	
+	return (mat - np.min(mat, axis=axis)) / denom
 
 def calcSingleSPStrength(objectiveValues, i):
-	strengths = np.logical_and((objectiveValues[i, 0] > objectiveValues[:, 0]),
-							   (objectiveValues[i, 1] > objectiveValues[:, 1]),
-							   (objectiveValues[i, 2] > objectiveValues[:, 2])).sum()
-
+	strengthsGE = np.logical_and(np.logical_and((objectiveValues[i, 0] >= objectiveValues[:, 0]),
+												(objectiveValues[i, 1] >= objectiveValues[:, 1])),
+								 (objectiveValues[i, 2] >= objectiveValues[:, 2]))
+	
+	strengthsEE = np.logical_and(np.logical_and(np.isclose(objectiveValues[i, 0], objectiveValues[:, 0]),
+												np.isclose(objectiveValues[i, 1], objectiveValues[:, 1])),
+								 np.isclose(objectiveValues[i, 2], objectiveValues[:, 2]))
+	
+	strengths = strengthsGE.sum() - strengthsEE.sum()
+	
 	return strengths
 
 def calcSPRawFitness(objectiveValues, strengths, i):
 	# finding which points dominate the current point i
-	indxs = np.where(np.logical_and((objectiveValues[i, 0] < objectiveValues[:, 0]),
-								   	(objectiveValues[i, 1] < objectiveValues[:, 1]),
-								   	(objectiveValues[i, 2] < objectiveValues[:, 2])))[0]
+	strengthsLE = np.logical_and(np.logical_and((objectiveValues[i, 0] <= objectiveValues[:, 0]),
+												(objectiveValues[i, 1] <= objectiveValues[:, 1])),
+								 (objectiveValues[i, 2] <= objectiveValues[:, 2]))
+	
+	strengthsEE = np.logical_and(np.logical_and(np.isclose(objectiveValues[i, 0], objectiveValues[:, 0]),
+												np.isclose(objectiveValues[i, 1], objectiveValues[:, 1])),
+								 np.isclose(objectiveValues[i, 2], objectiveValues[:, 2]))
+	
+	strengthsXOR = np.logical_xor(strengthsLE, strengthsEE)
+	
+	indxs = np.where(strengthsXOR)
 
 	# returning the sum of the strengths of each of those indexes
 	return strengths[indxs].sum()
