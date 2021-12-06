@@ -1,9 +1,10 @@
 <?xml version="1.0"?>
 
 <launch>
-  <node pkg="underwater_inspection" name="viewpoint_generation_node" type="ViewpointGeneration.py" output="screen"/>
+  <!-- <node pkg="underwater_inspection" name="viewpoint_generation_node" type="ViewpointGeneration.py" output="screen"/> -->
   <node pkg="underwater_inspection" name="battery_node" type="BatteryMetric.py" output="screen"/>
-  <node pkg="underwater_inspection" name="viewpoint_selection_node" type="ViewpointSelection.py" output="screen"/>
+  <!-- <node pkg="underwater_inspection" name="viewpoint_selection_node" type="ViewpointSelection.py" output="screen"/> -->
+  <node pkg="underwater_inspection" name="peas_node" type="PEAS.py" output="screen"/>
   <node pkg="underwater_inspection" name="underwater_inspection_node" type="underwater_inspection_node" output="screen">
     <!-- launch-prefix="xterm -e gdb -args" -->
 

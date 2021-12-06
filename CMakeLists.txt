@@ -68,6 +68,8 @@ add_message_files(
 add_service_files(
    FILES
    DepleteBattery.srv
+   BatteryUsage.srv
+   CarveMap.srv
 )
 
 ## Generate actions in the 'action' folder
@@ -83,6 +85,8 @@ generate_messages(
   std_msgs
   sensor_msgs
   geometry_msgs
+  inspection_planner_msgs
+  underwater_inspection
 )
 
 ################################################

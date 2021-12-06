@@ -1,0 +1,6 @@
+bool flag
+inspection_planner_msgs/ViewpointList vps_map
+---
+underwater_inspection/MultiViewpointInfo vps_battery 
+bool success
+string message

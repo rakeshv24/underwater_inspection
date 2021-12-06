@@ -2,8 +2,8 @@ import numpy as np
 
 def getRotationMatrix(pitch, yaw):
 	# function to calculate a partial rotation matrix using the pitch and the yaw
-	# inputs: 	pitch of the auv
-	#			yaw of the auv
+	# inputs: 	altitude angle
+	#			azimuthal angle
 	# outputs: 	rotation matrix
 
 	# calculating yaw matrix
@@ -24,8 +24,8 @@ def sliceSphericalCap(points, x, y, z, sphereRadius, pitch, yaw, capRadius):
 	# function to get the points that make up a spherical cap
 	# inputs: 	full spherical cloud
 	#			x, y, z point that represents the origin
-	# 			pitch of the auv
-	#			yaw of the auv
+	# 			altitude angle
+	#			azimuthal angle
 	#			cap radius
 	# outputs: 	subset of the points input that make up the cap
 
@@ -57,8 +57,8 @@ def sliceSphericalCap(points, x, y, z, sphereRadius, pitch, yaw, capRadius):
 def slicePatch(points, pitch ,yaw, sphereRadius, patchHeight, patchWidth):
 	# function to get the points that make up a patch
 	# inputs: 	full spherical cloud
-	# 			pitch of the auv
-	#			yaw of the auv
+	# 			altitude angle
+	#			azimuthal angle
 	#			patch height
 	# 			patch width
 	# outputs: 	subset of the points that make up the patch

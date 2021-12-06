@@ -4,7 +4,7 @@
 import rospy
 from inspection_planner_msgs.msg import Viewpoint, ViewpointList
 from underwater_inspection.msg import ViewpointInfo, MultiViewpointInfo
-from underwater_inspection.srv import DepleteBattery
+from underwater_inspection.srv import DepleteBattery, BatteryUsage
 
 
 class Battery():
@@ -17,9 +17,9 @@ class Battery():
 		# to simulate noise, we use a scipy random distribution specified on contruction
 		self._distribution = distribution
 
-		self.viewpoint_sel_sub = rospy.Subscriber("/rob537/viewpoints_map_info", ViewpointList, self.viewpoint_callback,
-                                                  queue_size=1)
-		self.viewpoint_info_pub = rospy.Publisher("/rob537/viewpoints_info", MultiViewpointInfo, queue_size=10)
+		# self.viewpoint_sel_sub = rospy.Subscriber("/rob537/viewpoints_map_info", ViewpointList, self.viewpoint_callback,
+        #                                           queue_size=1)
+		# self.viewpoint_info_pub = rospy.Publisher("/rob537/viewpoints_info", MultiViewpointInfo, queue_size=10)
 
 	def viewpoint_callback(self, msg):
 		viewpoint_info = MultiViewpointInfo()
@@ -52,11 +52,28 @@ class Battery():
 			self._battery -= req.distance * self._distribution.rvs()
 		return True, "Battery depleted!"
 
+	def BatteryUsage(self, req):
+		if req.flag:
+			viewpoint_info = MultiViewpointInfo()
+			viewpoint_info.vp_info = []			
+			for viewpoint in req.vps_map.viewpoints:
+				vp = ViewpointInfo()
+				vp.x = viewpoint.x
+				vp.y = viewpoint.y
+				vp.z = viewpoint.z
+				vp.yaw = viewpoint.yaw
+				vp.cost = viewpoint.cost
+				vp.reward = viewpoint.reward
+				vp.battery = self._battery - viewpoint.cost	
+				viewpoint_info.vp_info.append(vp)
+			return viewpoint_info, True, "Sent battery info!"
+
 
 if __name__ == '__main__':
     rospy.init_node('battery_node', anonymous=True)
     b = Battery(100.0, None)
     db = rospy.Service('underwater_inspection/deplete_battery', DepleteBattery, b.depleteBattery)
+    bu = rospy.Service('underwater_inspection/battery_usage', BatteryUsage, b.BatteryUsage)
     
     try:
         rospy.spin()

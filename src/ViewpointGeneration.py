@@ -61,7 +61,7 @@ class ViewpointGenerator:
                                                           self.rob_pose[0],
                                                           self.rob_pose[1],
                                                           self.rob_pose[2],
-                                                          2,
+                                                          i,
                                                           euler_angles[1],
                                                           euler_angles[2],
                                                           0.5*i)
@@ -70,7 +70,7 @@ class ViewpointGenerator:
                                                           self.rob_pose[0],
                                                           self.rob_pose[1],
                                                           self.rob_pose[2],
-                                                          2,
+                                                          i,
                                                           euler_angles[1],
                                                           self.wrap_angle(euler_angles[2] - np.radians(90)),
                                                           0.5*i)
@@ -79,12 +79,13 @@ class ViewpointGenerator:
                                                           self.rob_pose[0],
                                                           self.rob_pose[1],
                                                           self.rob_pose[2],
-                                                          2,
+                                                          i,
                                                           euler_angles[1],
                                                           self.wrap_angle(euler_angles[2] + np.radians(90)),
                                                           0.5*i)
             
             sectionPoints = np.vstack((sectionPoints1, sectionPoints2, sectionPoints3))
+            sectionPoints = np.unique(sectionPoints, axis=0)
             
             for v in viewpoints:
                 vx = v[0]
