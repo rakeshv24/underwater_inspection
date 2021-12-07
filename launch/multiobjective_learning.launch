@@ -5,7 +5,7 @@
   <node pkg="underwater_inspection" name="battery_node" type="BatteryMetric.py" output="screen"/>
   <!-- <node pkg="underwater_inspection" name="viewpoint_selection_node" type="ViewpointSelection.py" output="screen"/> -->
   <node pkg="underwater_inspection" name="peas_node" type="PEAS.py" output="screen"/>
-  <node pkg="underwater_inspection" name="underwater_inspection_node" type="underwater_inspection_node" output="screen">
+  <node pkg="underwater_inspection" name="underwater_inspection_node" type="underwater_inspection_node" output="screen" launch-prefix="xterm -e gdb -args">
     <!-- launch-prefix="xterm -e gdb -args" -->
 
     <!-- load the base config file with all the params -->

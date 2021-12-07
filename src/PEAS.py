@@ -9,9 +9,11 @@ from geometry_msgs.msg import Pose, Point, PoseArray
 from inspection_planner_msgs.msg import Viewpoint, ViewpointList
 from underwater_inspection.msg import ViewpointInfo, MultiViewpointInfo
 from underwater_inspection.srv import DepleteBattery, BatteryUsage, CarveMap
+from visualization_msgs.msg import Marker
 import numpy as np
 import copy
 import ParetoFronts
+import time
 
 
 def battery_usage_service(flag, viewpoints):
@@ -25,7 +27,7 @@ def battery_usage_service(flag, viewpoints):
         else:
             return resp.vps_battery
     except rospy.ServiceException as e:
-        rospy.logerr("Battery usage service call failed %s", e)
+        rospy.logerr("Battery usage service call failed: %s", e)
 
         
 def deplete_battery_service(distance):
@@ -35,7 +37,7 @@ def deplete_battery_service(distance):
         resp = handle(distance)
         return resp
     except rospy.ServiceException as e:
-        rospy.logerr("Deplete battery service call failed %s", e)
+        rospy.logerr("Deplete battery service call failed: %s", e)
 
 
 def carve_map_service(flag, viewpoints):
@@ -45,12 +47,14 @@ def carve_map_service(flag, viewpoints):
         resp = handle(flag, viewpoints)
         if resp.success == False:
             print("[PEAS][carve_map_service] Not successful")
+            time.sleep(1)
             return carve_map_service(flag, viewpoints)
         else:
             # print(resp.vps_map)
+            print("[PEAS][carve_map_service] Successful")
             return resp.vps_map
     except rospy.ServiceException as e:
-        rospy.logerr("Deplete battery service call failed %s", e)
+        rospy.logerr("Map carving service call failed: %s", e)
         
         
 class PEAS:
@@ -58,8 +62,10 @@ class PEAS:
         self.rob_pose = None
         self.generations = 1
         self.initial_population = []
-        self.mutated_population = []
-        self.crossed_population = []
+        self.mutated_population = None
+        self.crossed_population = None
+        self.m_population = []
+        self.c_population = []
         self.combined_population = []
         self.selected_population = []
         self.pop_size = 5
@@ -70,11 +76,34 @@ class PEAS:
         self.azimuth_angle = 0.0
         self.altitude_angle = 0.0
         self.path_length = 0.0
+        self.traversed_path = []
+        self.distance_tolerance = 0.05
+        self.yaw_tolerance = 0.005
+        self.move_flag = False
+        
+        # bop_panel 
+        # xmin: -14.8
+        # xC: -10
+        # xmax: -5.2
+        # ymin: 11.05
+        # yc: 15
+        # ymax: 18.95 
+        # zmin: 82.5
+        # zC: 88.7  
+        # zmax: 94.9
+        # Volume = l*b*h = 9.6*7.9*12.4 = 940.416 m^3
+        self.bop_panel_origin = np.array([-10, 15, 88.7])
+        self.bop_panel_dimensions = np.array([4.8, 3.95, 6.2]) # l/2, b/2, h/2
+        self.bop_diagonal = np.linalg.norm(self.bop_panel_dimensions)
+        self.safe_tolerance = self.bop_diagonal + 1.0
+        
         self.sphere_viewpoints_pub = rospy.Publisher("/rob537/sphere_viewpoints", ViewpointList, queue_size=10)
         self.generated_viewpoints_pub = rospy.Publisher("/rob537/generated_viewpoints", ViewpointList, queue_size=10)
         self.selected_viewpoints_pub = rospy.Publisher("/rob537/selected_viewpoints", ViewpointList, queue_size=10)
         self.selected_view_pub = rospy.Publisher("/rob537/selected_view", ViewpointList, queue_size=10)
         self.odom_sub = rospy.Subscriber("/raven/odom", Odometry, self.odom_callback, queue_size=1)
+        self.best_viewpoint_pub = rospy.Publisher("/waypoints", PoseArray, queue_size=1)
+        self.viz_marker_pub = rospy.Publisher("/path_traversed", Marker, queue_size=1)
 
     def wrap_angle(self, angle):
         return ((angle + np.pi) % (2 * np.pi)) - np.pi
@@ -93,23 +122,37 @@ class PEAS:
                          euler_angles[1],
                          euler_angles[2]
                          ]
+        
+        if self.move_flag:
+            self.wait_until_move()
+        else:
+            self.generate_init_pop()
+            
+            for i in range(self.generations):
+                self.m_population = []
+                self.c_population = []
+                p_size = 0
+                j = 0
+                self.mutated_population = None
+                self.crossed_population = None
+                self.combined_population = copy.deepcopy(self.initial_population)
+                
+                while p_size <= self.pop_size:
+                    if random.random() < self.mutation_rate:
+                        self.m_population.append(self.mutate(j))
+                        self.mutated_population = np.array(self.m_population)
+                        self.combined_population = np.vstack((self.combined_population, self.mutated_population))
+                        p_size += 1
+                    else:
+                        self.crossover()
+                        self.crossed_population = np.array(self.c_population)
+                        self.combined_population = np.vstack((self.combined_population, self.crossed_population))
+                        p_size += 2
+                    j += 1
+                
+                self.combined_population = np.unique(self.combined_population, axis=0)
 
-        self.generate_init_pop()
-        for i in range(self.generations):
-            self.mutated_population = []
-            self.crossed_population = []
-            for j in range(self.initial_population.shape[0]):
-                if random.random() < self.mutation_rate:
-                    self.mutated_population.append(self.mutate(j))
-                    self.m_population = np.array(self.mutated_population)
-                else:
-                    self.crossover()
-                    self.c_population = np.array(self.crossed_population)
-                    
-            self.combined_population = np.vstack((self.initial_population, self.m_population, self.c_population))
-            self.combined_population = np.unique(self.combined_population, axis=0)
-
-            self.viewpoint_selection()
+                self.viewpoint_selection()
 
     def generate_init_pop(self):
         self.initial_population = []
@@ -119,30 +162,30 @@ class PEAS:
             self.initial_population.append([self.altitude_angle, self.azimuth_angle, i, 0.5 * i])
             # Left
             self.initial_population.append([self.altitude_angle, self.wrap_angle(
-                self.azimuth_angle - np.radians(90)), i, 0.5 * i])
+                self.azimuth_angle - np.radians(45)), i, 0.5 * i])
             # Right
             self.initial_population.append([self.altitude_angle, self.wrap_angle(
-                self.azimuth_angle + np.radians(90)), i, 0.5 * i])
+                self.azimuth_angle + np.radians(45)), i, 0.5 * i])
             # Up
             self.initial_population.append(
-                [self.wrap_angle(self.altitude_angle - np.radians(90)), self.azimuth_angle, i, 0.5 * i])
+                [self.wrap_angle(self.altitude_angle - np.radians(45)), self.azimuth_angle, i, 0.5 * i])
             # Down
             self.initial_population.append(
-                [self.wrap_angle(self.altitude_angle + np.radians(90)), self.azimuth_angle, i, 0.5 * i])
+                [self.wrap_angle(self.altitude_angle + np.radians(45)), self.azimuth_angle, i, 0.5 * i])
 
         self.initial_population = np.array(self.initial_population)
 
     def mutate(self, idx):
         r = random.random()
         mutated = copy.deepcopy(self.initial_population[idx, :])
-        if r < 0.33:
-            mutated[0] = random.uniform(-1.57, 1.57) 
-        elif 0.33 <= r < 0.66:
-            mutated[1] = random.uniform(-1.57, 1.57) 
+        if r < 0.5:
+            mutated[0] = random.uniform(-np.radians(45), np.radians(45)) 
         else:
-            tmp = mutated[0]
-            mutated[0] = mutated[1]
-            mutated[1] = tmp
+            a1 = self.wrap_angle(mutated[1] - np.radians(45))
+            a2 = self.wrap_angle(mutated[1] + np.radians(45))
+            min_angle = min(a1, a2)
+            max_angle = max(a1, a2)
+            mutated[1] = random.uniform(min_angle, max_angle) 
         return mutated                
     
     def crossover(self):
@@ -173,9 +216,19 @@ class PEAS:
                     v1[1] = v2[0]
                     v2[0] = tmp
                     
-        self.crossed_population.append(v1)                
-        self.crossed_population.append(v2)                
-
+        self.c_population.append(v1)                
+        self.c_population.append(v2)
+    
+    def remove_infeasible(self, points):
+        feasible_points = []
+        for i in range(len(points)):
+            p = np.array([points[i][0], points[i][1], points[i][2]])
+            bop_vector = np.linalg.norm(p - self.bop_panel_origin)
+            # print(bop_vector)
+            if (bop_vector > self.safe_tolerance):
+                feasible_points.append(points[i])
+        return feasible_points
+            
     def viewpoint_selection(self):
         self.cap_fitness = []
         viewpoints = {}
@@ -206,6 +259,8 @@ class PEAS:
                 q.yaw = v[4]
                 q.cost = sr
                 self.sphere_vps.viewpoints.append(q)
+        
+        # print(self.combined_population.shape)
             
         for i in range(self.combined_population.shape[0]):
             v_i = self.combined_population[i]
@@ -219,6 +274,11 @@ class PEAS:
                                                      v_i[0],
                                                      v_i[1],
                                                      v_i[3])
+            # print("Before: ", len(capPoints))
+            capPoints = self.remove_infeasible(capPoints)
+            # print("After: ", len(capPoints))
+            if len(capPoints) == 0:
+                continue
             
             # Step 3: Obtain battery usage, segment length and percentage of unexplored area for the capPoints
             vps = ViewpointList()
@@ -234,42 +294,44 @@ class PEAS:
                 self.generated_vps.viewpoints.append(vp)
             
             vps_map = carve_map_service(True, vps)
-            # print(capPoints)
-            # print(vps_map)
+
             vps_battery = battery_usage_service(True, vps_map)
             
             # print(vps_battery)
                                     
             # Step 4: Evaluate the fitness of the capPoints
-            points = []
+            rov_properties = []
+            cap_points = []
             for viewpoint in vps_battery.vp_info:
-                rov_properties = [viewpoint.battery, -viewpoint.cost, viewpoint.reward]
-                points.append(rov_properties)
+                cap_points.append([viewpoint.x, viewpoint.y, viewpoint.z, viewpoint.yaw,
+                                   viewpoint.battery, viewpoint.cost, viewpoint.reward])
+                rov_properties.append([viewpoint.battery, -viewpoint.cost, viewpoint.reward])
             
-            print(points)
-            
-            objectiveValues = np.array(points)
+            # print(points)
+            if len(rov_properties) <= 1:
+                continue
+                        
+            objectiveValues = np.array(rov_properties)
             fitnessValues = ParetoFronts.calcSPFitnessValues(objectiveValues)
             
-            print(fitnessValues)
+            # print(fitnessValues)
             
             # Step 5: Determine average fitness of the cap
             avg_fitness = np.mean(fitnessValues)
-            self.cap_fitness.append([vps_battery, v_i, fitnessValues, avg_fitness])
+            self.cap_fitness.append([cap_points, v_i, fitnessValues, avg_fitness])
         
         # Step 6: Sort caps based on average fitness
         self.cap_fitness.sort(key=lambda x:x[3])
-        
-        print(self.cap_fitness)    
+        self.cap_fitness = np.array(self.cap_fitness)
         
         # Step 7: Select 'N' best caps        
         self.selected_population = []
         self.selected_ids = []
-        for _ in range(len(self.cap_fitness)):
-            self.cap_fitness = np.array(self.cap_fitness)
-            norm_score = np.linalg.norm(self.cap_fitness[:, 3])
-            self.cap_fitness[:, 3] /= norm_score
-            
+        
+        norm_score = np.linalg.norm(self.cap_fitness[:, 3])
+        self.cap_fitness[:, 3] /= norm_score
+        
+        if self.cap_fitness.shape[0] > self.pop_size:
             for _ in range(self.pop_size):
                 r = random.random()
                 np.random.shuffle(self.cap_fitness)
@@ -277,11 +339,13 @@ class PEAS:
                     if r > self.cap_fitness[k][3]:
                         self.selected_population.append(self.cap_fitness[k])
                         self.selected_ids.append(k)
-                        self.cap_fitness = np.delete(self.cap_fitness, k)
+                        self.cap_fitness = np.delete(self.cap_fitness, k, axis=0)
                         break
-                    
+        else:
+            self.selected_population = copy.deepcopy(self.cap_fitness)
+                
         self.selected_population = np.array(self.selected_population)
-        print(self.selected_population)        
+        print(self.selected_population.shape)        
         
         # Step 8: Extract the cap with the best overall fitness
         placeholder_ids = np.argsort(self.selected_population[:, 3]).tolist()
@@ -289,23 +353,101 @@ class PEAS:
         best_cap = self.selected_population[section_idx]
         
         # Step 9: Extract the viewpoint with the best overall fitness
-        best_cap_fitness = best_cap[2]
+        best_cap_fitness = best_cap[2].tolist()
         best_viewpoint_idx = best_cap_fitness.index(min(best_cap_fitness))
-        best_viewpoint = best_cap[0].vp_info[best_viewpoint_idx]
+        best_viewpoint = best_cap[0][best_viewpoint_idx]
+        self.target_viewpoint = copy.deepcopy(best_viewpoint)
         
         q = Viewpoint()
-        q.x = best_viewpoint.x
-        q.y = best_viewpoint.y
-        q.z = best_viewpoint.z
-        q.yaw = best_viewpoint.yaw
-        q.cost = best_viewpoint.cost
+        q.x = best_viewpoint[0]
+        q.y = best_viewpoint[1]
+        q.z = best_viewpoint[2]
+        q.yaw = best_viewpoint[3]
+        q.cost = best_viewpoint[5]
         self.selected_view.viewpoints.append(q)
-
+        
         self.sphere_viewpoints_pub.publish(self.sphere_vps)
         self.generated_viewpoints_pub.publish(self.generated_vps)
         self.selected_viewpoints_pub.publish(self.selected_vps)
         self.selected_view_pub.publish(self.selected_view)
+        
+        waypoint = PoseArray()
+        waypoint.header.frame_id = "world"
+        waypoint.header.stamp = rospy.Time.now()
+        selected_point = Pose()
+        selected_point.position.x = best_viewpoint[0]
+        selected_point.position.y = best_viewpoint[1]
+        selected_point.position.z = best_viewpoint[2]
+        q = tf.transformations.quaternion_from_euler(0.0, 0.0, best_viewpoint[3])
+        selected_point.orientation.x = q[0]
+        selected_point.orientation.y = q[1]
+        selected_point.orientation.z = q[2]
+        selected_point.orientation.w = q[3]
+        waypoint.poses.append(selected_point)
+        
+        viz_marker = Point()
+        viz_marker.x = best_viewpoint[0]
+        viz_marker.y = best_viewpoint[1]
+        viz_marker.z = best_viewpoint[2]
+        
+        if len(self.traversed_path) == 0.0:
+            current_location = Point()
+            current_location.x = self.rob_pose[0]
+            current_location.y = self.rob_pose[1]
+            current_location.z = self.rob_pose[2]
+            self.traversed_path.append(current_location)
+        
+        self.path_length += best_viewpoint[5]
+        self.traversed_path.append(viz_marker)
+        self.visualize_path()
+        self.best_viewpoint_pub.publish(waypoint)
+        self.move_flag = True
+        deplete_battery_service(best_viewpoint[5])
+        print(best_viewpoint, self.path_length)
     
+    def wait_until_move(self):
+        diff_yaw = abs(self.target_viewpoint[3] - self.rob_pose[5])
+        diff_dist = np.linalg.norm(np.array(self.rob_pose[0:3]) -  np.array(self.target_viewpoint[0:3]))
+        # print(diff_yaw, diff_dist)
+        if diff_yaw < self.yaw_tolerance and diff_dist < self.distance_tolerance:
+            self.move_flag = False
+        
+    def visualize_path(self):
+        points = Marker()
+        line_strip = Marker()
+        points.header.frame_id = line_strip.header.frame_id = "world"
+        points.header.stamp = line_strip.header.stamp = rospy.Time.now()
+        points.ns = line_strip.ns = "points_and_lines"
+        points.action = line_strip.action = Marker.ADD
+        points.pose.orientation.w = line_strip.pose.orientation.w = 1.0
+        
+        points.id = 0
+        line_strip.id = 1
+
+        points.type = Marker.POINTS
+        line_strip.type = Marker.LINE_STRIP
+
+        # POINTS markers use x and y scale for width/height respectively
+        points.scale.x = 0.05
+        points.scale.y = 0.05
+        
+        # LINE_STRIP markers use only the x component of scale, for the line width
+        line_strip.scale.x = 0.05
+
+        # Points are green
+        points.color.g = 1.0
+        points.color.a = 1.0
+
+        # Line strip is red
+        line_strip.color.r = 1.0
+        line_strip.color.a = 1.0
+        
+        for i in range(len(self.traversed_path)):
+            points.points.append(self.traversed_path[i])
+            line_strip.points.append(self.traversed_path[i])
+            
+        self.viz_marker_pub.publish(points)
+        self.viz_marker_pub.publish(line_strip)
 
 if __name__ == '__main__':
     rospy.init_node('peas_node', anonymous=True)

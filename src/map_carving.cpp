@@ -156,15 +156,15 @@ void MapCarving::publishViewpointInfo(inspection_planner_msgs::ViewpointList vie
 // Services
 
 bool MapCarving::carveMapService(underwater_inspection::CarveMap::Request &req, underwater_inspection::CarveMap::Response &res){
+  inspection_planner_msgs::ViewpointList viewpoints_map;
   if(req.flag && tree_initialized_){
-    // std::cout<<"[map_carving][carveMapService] carving..."<<std::endl;
-    inspection_planner_msgs::ViewpointList viewpoints_map;
+    std::cout<<"[map_carving][carveMapService] carving..."<<std::endl;
     for (auto& viewpoint : req.vps.viewpoints){
       double unexplored_area = obtainViewpointInfo(viewpoint.x, viewpoint.y, viewpoint.z, viewpoint.yaw);
-      // if(unexplored_area>0.99 || unexplored_area<0.1){
-      //   continue;
-      // }
-      // else{
+      if(unexplored_area>0.97 || unexplored_area<0.10){
+        continue;
+      }
+      else{
         inspection_planner_msgs::Viewpoint viewpoint_modified;
         viewpoint_modified.x = viewpoint.x;
         viewpoint_modified.y = viewpoint.y;
@@ -173,7 +173,7 @@ bool MapCarving::carveMapService(underwater_inspection::CarveMap::Request &req, 
         viewpoint_modified.cost = viewpoint.cost;
         viewpoint_modified.reward = unexplored_area;
         viewpoints_map.viewpoints.push_back(viewpoint_modified);
-      // }
+      }
     }
     res.vps_map = viewpoints_map;
     res.success = true;
@@ -181,6 +181,7 @@ bool MapCarving::carveMapService(underwater_inspection::CarveMap::Request &req, 
   }
   else{
     std::cout<<"[map_carving][carveMapService] not carving..."<<std::endl;
+    // res.vps_map = viewpoints_map;
     res.success = false;
     res.message = "Failure";
   }
@@ -199,16 +200,14 @@ double MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, do
   double total_points = 0;
   
   if(tree_initialized_){
-    double step_size = 0.25;
-
     octomap::point3d ray_origin_pose (vp_x, vp_y, vp_z);
     
     double nod_fov = M_PI_2;
-    double nod_angle_inc = 0.05;
+    double nod_angle_inc = 0.1;
     double h_fov = 130 * (M_PI/180);
     // double v_fov = 20 * (M_PI/180);
     // int ray_skip = 10;
-    double n_beams = 512;
+    double n_beams = 130;
     double angle_inc = h_fov / n_beams;
     
     double min_yaw = std::min(wrapAngle(vp_yaw-h_fov/2), wrapAngle(vp_yaw+h_fov/2));
@@ -216,7 +215,7 @@ double MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, do
 
     for(double pitch_direction = -nod_fov/2; pitch_direction <= nod_fov/2; pitch_direction += nod_angle_inc){
       for(double yaw_direction = min_yaw; yaw_direction <= max_yaw; yaw_direction += angle_inc){
-        for(double xx=0.1; xx<=20.0; xx+=0.1){
+        for(double xx=0.25; xx<=20.0; xx+=0.25){
           
           total_points += 1;
           double d_x = xx;
@@ -237,7 +236,7 @@ double MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, do
 
           float tree_occ_thresh = collision_tree_->getOccupancyThresLog();
           uint tree_depth = collision_tree_->getTreeDepth();
-          octomap::OcTreeNode *oct_query_node = collision_tree_->search(d_x, d_y, d_z, 9);
+          octomap::OcTreeNode *oct_query_node = collision_tree_->search(d_x, d_y, d_z, 13);
         
           if(oct_query_node != NULL){
             float query_node_value = oct_query_node->getLogOdds();
@@ -264,6 +263,9 @@ double MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, do
     // std::cout<<"[MapCarving][obtainViewpointInfo] unexplored_area: "<<unexplored_area<<std::endl;
     return unexplored_area;
   }
+  else{
+    return -1;
+  }
 }
 
 //////////////////////////////////
@@ -278,7 +280,7 @@ int main(int argc, char** argv){
 
   ROS_INFO("[map_carving][main] Creating node...");
 
-  ros::init(argc, argv, "map_carving");
+  ros::init(argc, argv, "underwater_inspection_node");
 
   map_carving_ns::MapCarving map_carving;
 

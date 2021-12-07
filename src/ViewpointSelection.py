@@ -96,7 +96,6 @@ class ViewpointSelector:
     def visualize_path(self):
         points = Marker()
         line_strip = Marker()
-        line_list = Marker()
         points.header.frame_id = line_strip.header.frame_id = "world"
         points.header.stamp = line_strip.header.stamp = rospy.Time.now()
         points.ns = line_strip.ns = "points_and_lines"
