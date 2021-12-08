@@ -128,7 +128,8 @@ void MapCarving::collisonMapCallback(const octomap_msgs::Octomap::ConstPtr &map_
     tree_initialized_ = true;
     collision_tree_ = dynamic_cast<octomap::OcTree*>(abstract_tree_);
     node_count_ = collision_tree_->calcNumNodes();
-    // std::cout << "[map_carving][collisonMapCallback] Tree node count: " << node_count_ << std::endl;
+    std::cout << "[map_carving][collisonMapCallback] Tree node count: " << node_count_ << std::endl;
+    std::cout << "[map_carving][collisonMapCallback] Octree initialized" << std::endl;
   }
 
 }
@@ -161,10 +162,13 @@ bool MapCarving::carveMapService(underwater_inspection::CarveMap::Request &req, 
     std::cout<<"[map_carving][carveMapService] carving..."<<std::endl;
     for (auto& viewpoint : req.vps.viewpoints){
       double unexplored_area = obtainViewpointInfo(viewpoint.x, viewpoint.y, viewpoint.z, viewpoint.yaw);
-      if(unexplored_area>0.97 || unexplored_area<0.10){
+      // std::cout<<"[map_carving][carveMapService] unexplored_area: "<<unexplored_area<<std::endl;
+      if(unexplored_area>0.98 || unexplored_area<0.10){
+        // std::cout<<"[map_carving][carveMapService] I'm here!"<<std::endl;
         continue;
       }
       else{
+        // std::cout<<"[map_carving][carveMapService] adding points to list"<<std::endl;
         inspection_planner_msgs::Viewpoint viewpoint_modified;
         viewpoint_modified.x = viewpoint.x;
         viewpoint_modified.y = viewpoint.y;
@@ -207,7 +211,7 @@ double MapCarving::obtainViewpointInfo(double vp_x, double vp_y, double vp_z, do
     double h_fov = 130 * (M_PI/180);
     // double v_fov = 20 * (M_PI/180);
     // int ray_skip = 10;
-    double n_beams = 130;
+    double n_beams = 150;
     double angle_inc = h_fov / n_beams;
     
     double min_yaw = std::min(wrapAngle(vp_yaw-h_fov/2), wrapAngle(vp_yaw+h_fov/2));

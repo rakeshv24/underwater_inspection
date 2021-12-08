@@ -68,11 +68,12 @@ class PEAS:
         self.c_population = []
         self.combined_population = []
         self.selected_population = []
+        self.selected_viewpoints = []
         self.pop_size = 5
         self.cap_fitness = []
         # self.avg_cap_fitness = []
         self.mutation_rate = 0.5
-        self.sphere_radii = [1.0, 2.0]
+        self.sphere_radii = [1.0, 2.0, 3.0]
         self.azimuth_angle = 0.0
         self.altitude_angle = 0.0
         self.path_length = 0.0
@@ -80,6 +81,7 @@ class PEAS:
         self.distance_tolerance = 0.05
         self.yaw_tolerance = 0.005
         self.move_flag = False
+        self.angle_range = np.radians(45)
         
         # bop_panel 
         # xmin: -14.8
@@ -95,7 +97,21 @@ class PEAS:
         self.bop_panel_origin = np.array([-10, 15, 88.7])
         self.bop_panel_dimensions = np.array([4.8, 3.95, 6.2]) # l/2, b/2, h/2
         self.bop_diagonal = np.linalg.norm(self.bop_panel_dimensions)
-        self.safe_tolerance = self.bop_diagonal + 1.0
+        # self.safe_tolerance = self.bop_diagonal + 0.5
+        
+        # turbine lander
+        # xC 20
+        # yC 35  
+        # zC 94.9
+        self.turbine_lander_origin = np.array([12.7, 42.39, 94.9])
+        self.safe_tolerance = 2.0
+        
+        self.battery_threshold = 30.0
+        self.battery_remaining = 100.0
+        self.mission_start_time = 0.0
+        self.mission_end_time = 0.0
+        self.mission_duration = 0.0
+        self.init_flag = True
         
         self.sphere_viewpoints_pub = rospy.Publisher("/rob537/sphere_viewpoints", ViewpointList, queue_size=10)
         self.generated_viewpoints_pub = rospy.Publisher("/rob537/generated_viewpoints", ViewpointList, queue_size=10)
@@ -123,36 +139,54 @@ class PEAS:
                          euler_angles[2]
                          ]
         
-        if self.move_flag:
-            self.wait_until_move()
-        else:
-            self.generate_init_pop()
-            
-            for i in range(self.generations):
-                self.m_population = []
-                self.c_population = []
-                p_size = 0
-                j = 0
-                self.mutated_population = None
-                self.crossed_population = None
-                self.combined_population = copy.deepcopy(self.initial_population)
-                
-                while p_size <= self.pop_size:
-                    if random.random() < self.mutation_rate:
-                        self.m_population.append(self.mutate(j))
-                        self.mutated_population = np.array(self.m_population)
-                        self.combined_population = np.vstack((self.combined_population, self.mutated_population))
-                        p_size += 1
-                    else:
-                        self.crossover()
-                        self.crossed_population = np.array(self.c_population)
-                        self.combined_population = np.vstack((self.combined_population, self.crossed_population))
-                        p_size += 2
-                    j += 1
-                
-                self.combined_population = np.unique(self.combined_population, axis=0)
+        if self.init_flag:
+            self.mission_start_time = time.time()
+            print("Timer started!")
+            self.init_flag = False
+        
+        if self.battery_remaining > self.battery_threshold:
+            if self.move_flag:
+                self.wait_until_move()
+            else:
+                self.generate_init_pop()
+                i = 0
+                while i < self.generations:
+                    self.m_population = []
+                    self.c_population = []
+                    p_size = 0
+                    j = 0
+                    self.mutated_population = None
+                    self.crossed_population = None
+                    self.combined_population = copy.deepcopy(self.initial_population)
+                    
+                    while p_size <= self.pop_size:
+                        if random.random() < self.mutation_rate:
+                            self.m_population.append(self.mutate(j))
+                            self.mutated_population = np.array(self.m_population)
+                            self.combined_population = np.vstack((self.combined_population, self.mutated_population))
+                            p_size += 1
+                        else:
+                            self.crossover()
+                            self.crossed_population = np.array(self.c_population)
+                            self.combined_population = np.vstack((self.combined_population, self.crossed_population))
+                            p_size += 2
+                        j += 1
+                    
+                    self.combined_population = np.unique(self.combined_population, axis=0)
 
-                self.viewpoint_selection()
+                    self.selected_population = self.viewpoint_selection()
+                    if self.selected_population is None:
+                        print("No viewpoints were selected")
+                        self.angle_range += np.radians(15)
+                        self.generate_init_pop()
+                    else:
+                        self.angle_range = np.radians(45)
+                        i += 1
+        else:
+            rospy.loginfo("[PEAS][odom_callback] Mission accomplished!!")
+            self.mission_end_time = time.time()
+            self.mission_duration = (self.mission_end_time - self.mission_start_time) / 60.0
+            print(self.mission_duration)
 
     def generate_init_pop(self):
         self.initial_population = []
@@ -162,16 +196,16 @@ class PEAS:
             self.initial_population.append([self.altitude_angle, self.azimuth_angle, i, 0.5 * i])
             # Left
             self.initial_population.append([self.altitude_angle, self.wrap_angle(
-                self.azimuth_angle - np.radians(45)), i, 0.5 * i])
+                self.azimuth_angle - self.angle_range), i, 0.5 * i])
             # Right
             self.initial_population.append([self.altitude_angle, self.wrap_angle(
-                self.azimuth_angle + np.radians(45)), i, 0.5 * i])
+                self.azimuth_angle + self.angle_range), i, 0.5 * i])
             # Up
             self.initial_population.append(
-                [self.wrap_angle(self.altitude_angle - np.radians(45)), self.azimuth_angle, i, 0.5 * i])
+                [self.wrap_angle(self.altitude_angle - self.angle_range), self.azimuth_angle, i, 0.5 * i])
             # Down
             self.initial_population.append(
-                [self.wrap_angle(self.altitude_angle + np.radians(45)), self.azimuth_angle, i, 0.5 * i])
+                [self.wrap_angle(self.altitude_angle + self.angle_range), self.azimuth_angle, i, 0.5 * i])
 
         self.initial_population = np.array(self.initial_population)
 
@@ -179,10 +213,10 @@ class PEAS:
         r = random.random()
         mutated = copy.deepcopy(self.initial_population[idx, :])
         if r < 0.5:
-            mutated[0] = random.uniform(-np.radians(45), np.radians(45)) 
+            mutated[0] = random.uniform(-self.angle_range, self.angle_range) 
         else:
-            a1 = self.wrap_angle(mutated[1] - np.radians(45))
-            a2 = self.wrap_angle(mutated[1] + np.radians(45))
+            a1 = self.wrap_angle(mutated[1] - self.angle_range)
+            a2 = self.wrap_angle(mutated[1] + self.angle_range)
             min_angle = min(a1, a2)
             max_angle = max(a1, a2)
             mutated[1] = random.uniform(min_angle, max_angle) 
@@ -199,22 +233,14 @@ class PEAS:
                 v2[0:2] = tmp
             else:
                 rr = random.random()
-                if rr < 0.25:
+                if rr < 0.5:
                     tmp = v1[0]
                     v1[0] = v2[0]
                     v2[0] = tmp 
-                elif 0.25 <= rr < 0.5:
+                else:
                     tmp = v1[1]
                     v1[1] = v2[1]
                     v2[1] = tmp     
-                elif 0.5 <= rr < 0.75:
-                    tmp = v1[0]
-                    v1[0] = v2[1]
-                    v2[1] = tmp 
-                else:
-                    tmp = v1[1]
-                    v1[1] = v2[0]
-                    v2[0] = tmp
                     
         self.c_population.append(v1)                
         self.c_population.append(v2)
@@ -222,10 +248,14 @@ class PEAS:
     def remove_infeasible(self, points):
         feasible_points = []
         for i in range(len(points)):
-            p = np.array([points[i][0], points[i][1], points[i][2]])
-            bop_vector = np.linalg.norm(p - self.bop_panel_origin)
-            # print(bop_vector)
-            if (bop_vector > self.safe_tolerance):
+            # Check for point-cylinder intersection
+            p1 = copy.deepcopy(self.turbine_lander_origin)
+            p2 = copy.deepcopy(self.turbine_lander_origin)
+            p2[2] -= 10
+            p3 = np.array([points[i][0], points[i][1], points[i][2]])
+            distance_to_obs = np.linalg.norm(np.cross(p2-p1,p1-p3))/np.linalg.norm(p2-p1)
+
+            if distance_to_obs > self.safe_tolerance and p3[2] < (self.turbine_lander_origin[2] - 1.5):
                 feasible_points.append(points[i])
         return feasible_points
             
@@ -250,7 +280,15 @@ class PEAS:
                                                                     self.rob_pose[2],
                                                                     sr,
                                                                     numPoints= int(sr * 50))
+            
+            # viewpoints_sphere = GenerateClouds.generateRandomCloud(self.rob_pose[0],
+            #                                                        self.rob_pose[1],
+            #                                                        self.rob_pose[2],
+            #                                                        sr,
+            #                                                        numPoints= int(sr * 50))
+            
             viewpoints[sr] = viewpoints_sphere
+            
             for v in viewpoints_sphere:
                 q = Viewpoint()
                 q.x = v[0]
@@ -274,9 +312,8 @@ class PEAS:
                                                      v_i[0],
                                                      v_i[1],
                                                      v_i[3])
-            # print("Before: ", len(capPoints))
+            
             capPoints = self.remove_infeasible(capPoints)
-            # print("After: ", len(capPoints))
             if len(capPoints) == 0:
                 continue
             
@@ -307,7 +344,6 @@ class PEAS:
                                    viewpoint.battery, viewpoint.cost, viewpoint.reward])
                 rov_properties.append([viewpoint.battery, -viewpoint.cost, viewpoint.reward])
             
-            # print(points)
             if len(rov_properties) <= 1:
                 continue
                         
@@ -320,90 +356,96 @@ class PEAS:
             avg_fitness = np.mean(fitnessValues)
             self.cap_fitness.append([cap_points, v_i, fitnessValues, avg_fitness])
         
-        # Step 6: Sort caps based on average fitness
-        self.cap_fitness.sort(key=lambda x:x[3])
-        self.cap_fitness = np.array(self.cap_fitness)
-        
-        # Step 7: Select 'N' best caps        
-        self.selected_population = []
-        self.selected_ids = []
-        
-        norm_score = np.linalg.norm(self.cap_fitness[:, 3])
-        self.cap_fitness[:, 3] /= norm_score
-        
-        if self.cap_fitness.shape[0] > self.pop_size:
-            for _ in range(self.pop_size):
-                r = random.random()
-                np.random.shuffle(self.cap_fitness)
-                for k in range(self.cap_fitness.shape[0]):
-                    if r > self.cap_fitness[k][3]:
-                        self.selected_population.append(self.cap_fitness[k])
-                        self.selected_ids.append(k)
-                        self.cap_fitness = np.delete(self.cap_fitness, k, axis=0)
-                        break
+        if len(self.cap_fitness) == 0:
+            return None
         else:
-            self.selected_population = copy.deepcopy(self.cap_fitness)
-                
-        self.selected_population = np.array(self.selected_population)
-        print(self.selected_population.shape)        
-        
-        # Step 8: Extract the cap with the best overall fitness
-        placeholder_ids = np.argsort(self.selected_population[:, 3]).tolist()
-        section_idx = placeholder_ids.index(min(placeholder_ids))       
-        best_cap = self.selected_population[section_idx]
-        
-        # Step 9: Extract the viewpoint with the best overall fitness
-        best_cap_fitness = best_cap[2].tolist()
-        best_viewpoint_idx = best_cap_fitness.index(min(best_cap_fitness))
-        best_viewpoint = best_cap[0][best_viewpoint_idx]
-        self.target_viewpoint = copy.deepcopy(best_viewpoint)
-        
-        q = Viewpoint()
-        q.x = best_viewpoint[0]
-        q.y = best_viewpoint[1]
-        q.z = best_viewpoint[2]
-        q.yaw = best_viewpoint[3]
-        q.cost = best_viewpoint[5]
-        self.selected_view.viewpoints.append(q)
-        
-        self.sphere_viewpoints_pub.publish(self.sphere_vps)
-        self.generated_viewpoints_pub.publish(self.generated_vps)
-        self.selected_viewpoints_pub.publish(self.selected_vps)
-        self.selected_view_pub.publish(self.selected_view)
-        
-        waypoint = PoseArray()
-        waypoint.header.frame_id = "world"
-        waypoint.header.stamp = rospy.Time.now()
-        selected_point = Pose()
-        selected_point.position.x = best_viewpoint[0]
-        selected_point.position.y = best_viewpoint[1]
-        selected_point.position.z = best_viewpoint[2]
-        q = tf.transformations.quaternion_from_euler(0.0, 0.0, best_viewpoint[3])
-        selected_point.orientation.x = q[0]
-        selected_point.orientation.y = q[1]
-        selected_point.orientation.z = q[2]
-        selected_point.orientation.w = q[3]
-        waypoint.poses.append(selected_point)
-        
-        viz_marker = Point()
-        viz_marker.x = best_viewpoint[0]
-        viz_marker.y = best_viewpoint[1]
-        viz_marker.z = best_viewpoint[2]
-        
-        if len(self.traversed_path) == 0.0:
-            current_location = Point()
-            current_location.x = self.rob_pose[0]
-            current_location.y = self.rob_pose[1]
-            current_location.z = self.rob_pose[2]
-            self.traversed_path.append(current_location)
-        
-        self.path_length += best_viewpoint[5]
-        self.traversed_path.append(viz_marker)
-        self.visualize_path()
-        self.best_viewpoint_pub.publish(waypoint)
-        self.move_flag = True
-        deplete_battery_service(best_viewpoint[5])
-        print(best_viewpoint, self.path_length)
+            # Step 6: Sort caps based on average fitness
+            self.cap_fitness.sort(key=lambda x:x[3])
+            self.cap_fitness = np.array(self.cap_fitness)
+            
+            # Step 7: Select 'N' best caps        
+            self.selected_viewpoints = []
+            self.selected_ids = []
+            
+            norm_score = np.linalg.norm(self.cap_fitness[:, 3])
+            self.cap_fitness[:, 3] /= norm_score
+            
+            if self.cap_fitness.shape[0] > self.pop_size:
+                for _ in range(self.pop_size):
+                    r = random.random()
+                    np.random.shuffle(self.cap_fitness)
+                    for k in range(self.cap_fitness.shape[0]):
+                        if r > self.cap_fitness[k][3]:
+                            self.selected_viewpoints.append(self.cap_fitness[k])
+                            self.selected_ids.append(k)
+                            self.cap_fitness = np.delete(self.cap_fitness, k, axis=0)
+                            break
+            else:
+                self.selected_viewpoints = copy.deepcopy(self.cap_fitness)
+                    
+            self.selected_viewpoints = np.array(self.selected_viewpoints)
+            print(self.selected_viewpoints.shape)        
+            
+            # Step 8: Extract the cap with the best overall fitness
+            placeholder_ids = np.argsort(self.selected_viewpoints[:, 3]).tolist()
+            section_idx = placeholder_ids.index(min(placeholder_ids))       
+            best_cap = self.selected_viewpoints[section_idx]
+            
+            # Step 9: Extract the viewpoint with the best overall fitness
+            best_cap_fitness = best_cap[2].tolist()
+            best_viewpoint_idx = best_cap_fitness.index(min(best_cap_fitness))
+            best_viewpoint = best_cap[0][best_viewpoint_idx]
+            self.target_viewpoint = copy.deepcopy(best_viewpoint)
+            
+            q = Viewpoint()
+            q.x = best_viewpoint[0]
+            q.y = best_viewpoint[1]
+            q.z = best_viewpoint[2]
+            q.yaw = best_viewpoint[3]
+            q.cost = best_viewpoint[5]
+            self.selected_view.viewpoints.append(q)
+            
+            self.sphere_viewpoints_pub.publish(self.sphere_vps)
+            self.generated_viewpoints_pub.publish(self.generated_vps)
+            self.selected_viewpoints_pub.publish(self.selected_vps)
+            self.selected_view_pub.publish(self.selected_view)
+            
+            waypoint = PoseArray()
+            waypoint.header.frame_id = "world"
+            waypoint.header.stamp = rospy.Time.now()
+            selected_point = Pose()
+            selected_point.position.x = best_viewpoint[0]
+            selected_point.position.y = best_viewpoint[1]
+            selected_point.position.z = best_viewpoint[2]
+            q = tf.transformations.quaternion_from_euler(0.0, 0.0, best_viewpoint[3])
+            selected_point.orientation.x = q[0]
+            selected_point.orientation.y = q[1]
+            selected_point.orientation.z = q[2]
+            selected_point.orientation.w = q[3]
+            waypoint.poses.append(selected_point)
+            
+            viz_marker = Point()
+            viz_marker.x = best_viewpoint[0]
+            viz_marker.y = best_viewpoint[1]
+            viz_marker.z = best_viewpoint[2]
+            
+            if len(self.traversed_path) == 0.0:
+                current_location = Point()
+                current_location.x = self.rob_pose[0]
+                current_location.y = self.rob_pose[1]
+                current_location.z = self.rob_pose[2]
+                self.traversed_path.append(current_location)
+            
+            self.path_length += best_viewpoint[5]
+            self.traversed_path.append(viz_marker)
+            self.visualize_path()
+            self.best_viewpoint_pub.publish(waypoint)
+            self.move_flag = True
+            deplete_battery_service(best_viewpoint[5])
+            print(best_viewpoint, self.path_length)
+            self.battery_remaining -= best_viewpoint[5]
+            
+            return best_cap[1]
     
     def wait_until_move(self):
         diff_yaw = abs(self.target_viewpoint[3] - self.rob_pose[5])
